@@ -1,0 +1,154 @@
+erDiagram
+
+    users ||--o{ parents : "1:1"
+    users ||--o{ drivers : "1:1"
+    users ||--o{ documents : "1:M"
+    users ||--o{ notifications : "1:M"
+
+    parents ||--o{ children : "1:M"
+
+    locations ||--o{ children : "1:M"
+    locations ||--o{ driver_locations : "1:M"
+
+    schools ||--o{ children : "1:M"
+    schools ||--o{ driver_schools : "1:M"
+
+    drivers }o--o{ driver_locations : "M:N"
+    drivers }o--o{ driver_schools : "M:N"
+    drivers ||--o{ trips : "1:M"
+
+    trips ||--o{ trip_participants : "1:M"
+    trips ||--o{ trip_events : "1:M"
+    trips ||--o{ ratings : "1:M"
+    trips ||--o{ driver_performance_scores : "1:1"
+
+    children ||--o{ trip_participants : "1:M"
+    children ||--o{ ratings : "1:M"
+
+    %% Entities with key fields
+    users {
+        BIGINT id PK
+        VARCHAR(255) name
+        VARCHAR(255) email
+        VARCHAR(20) phone
+        ENUM user_type
+        ENUM status
+    }
+
+    parents {
+        BIGINT id PK, FK
+        VARCHAR(50) relationship_to_child
+        VARCHAR(20) secondary_phone
+        TEXT address_street
+        VARCHAR(100) address_city
+        VARCHAR(100) address_country
+    }
+
+    drivers {
+        BIGINT id PK, FK
+        DATE date_of_birth
+        VARCHAR(100) gov_id_number
+        VARCHAR(100) license_number
+        VARCHAR(100) vehicle_make
+        VARCHAR(50) vehicle_model
+        SMALLINT vehicle_year
+        VARCHAR(30) vehicle_color
+        VARCHAR(20) license_plate
+        TINYINT max_child_capacity
+        VARCHAR(20) vehicle_type
+    }
+
+    locations {
+        BIGINT id PK
+        VARCHAR(100) name
+        VARCHAR(100) city
+        VARCHAR(100) country
+    }
+
+    schools {
+        BIGINT id PK
+        VARCHAR(255) name
+        TEXT address
+        VARCHAR(100) city
+        VARCHAR(100) country
+    }
+
+    children {
+        BIGINT id PK
+        BIGINT parent_id FK
+        VARCHAR(100) first_name
+        VARCHAR(100) last_name
+        DATE date_of_birth
+        BIGINT school_id FK
+        BIGINT pickup_location_id FK
+        TEXT medical_notes
+    }
+
+    documents {
+        BIGINT id PK
+        BIGINT user_id FK
+        ENUM doc_type
+        VARCHAR(255) file_path
+        BOOLEAN verified
+    }
+
+    driver_locations {
+        BIGINT driver_id FK
+        BIGINT location_id FK
+    }
+
+    driver_schools {
+        BIGINT driver_id FK
+        BIGINT school_id FK
+    }
+
+    trips {
+        BIGINT id PK
+        BIGINT driver_id FK
+        DATE scheduled_date
+        ENUM status
+        DECIMAL distance_km
+        TINYINT pricing_tier
+    }
+
+    trip_participants {
+        BIGINT id PK
+        BIGINT trip_id FK
+        BIGINT child_id FK
+        TIME pickup_scheduled_time
+        TIMESTAMP pickup_actual_time
+        ENUM status
+    }
+
+    trip_events {
+        BIGINT id PK
+        BIGINT trip_id FK
+        VARCHAR(50) event_type
+        TIMESTAMP recorded_at
+        DECIMAL lat
+        DECIMAL lng
+    }
+
+    ratings {
+        BIGINT id PK
+        BIGINT trip_id FK
+        BIGINT child_id FK
+        TINYINT rating
+        TEXT comment
+    }
+
+    driver_performance_scores {
+        BIGINT id PK
+        BIGINT driver_id FK
+        DECIMAL score
+        DATE calculated_for
+    }
+
+    notifications {
+        BIGINT id PK
+        BIGINT user_id FK
+        VARCHAR(255) title
+        TEXT body
+        VARCHAR(50) type
+        BOOLEAN is_read
+    }

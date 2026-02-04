@@ -1,0 +1,16 @@
+﻿Category,Technology,Purpose,Why It’s Chosen,Free Tier Limits
+Backend Framework,Laravel 10+,"Core application logic, APIs, auth, scheduling","Robust, secure, built-in features (queues, notifications, Eloquent ORM)",Open-source (free forever)
+Frontend,Blade + Alpine.js / Vue.js,Parent & driver web interfaces,"Lightweight, integrates seamlessly with Laravel",Open-source
+Database,MySQL / PostgreSQL,"Store users, trips, ratings, etc.","Reliable, Laravel-native support",Free on local/dev; free tiers on Render/Railway
+Real-Time Communication,Soketi (self-hosted),"Live trip tracking, notifications","Open-source, unlimited connections, Pusher-compatible",Free (self-hosted via Docker)
+Real-Time Fallback,Pusher,Alternative to Soketi (easier setup),"Simple integration, good for early MVP","200k messages/day, 100 concurrent users"
+Live Maps,Leaflet.js + OpenStreetMap,"Display driver location, routes","No API keys, no cost, privacy-friendly",Completely free
+Geocoding & Routing,OpenRouteService (ORS),Calculate driving distance for pricing tiers,"Accurate road distance, supports global urban areas","2,000 requests/day (no credit card)"
+Email Notifications,Resend,"Send OTPs, trip alerts, rating reminders","Built by Laravel community, high deliverability","3,000 emails/month forever"
+Authentication,Laravel Sanctum,Secure API access for web/mobile,"Token-based auth, simple for SPAs",Built into Laravel (free)
+File Storage,Local disk / Cloudflare R2,Store ID/license uploads,R2 has free tier; local for dev,R2: 10 GB free storage + 1M ops
+Background Jobs,Laravel Queues (database driver),"Process emails, distance calc, scoring","No external dependency, reliable",Free
+Hosting (Dev/Prod),Railway.app or Render,Deploy Laravel app + DB,"One-click Laravel deploy, free tier available",Free for low-traffic MVP
+Driver Location (Web),Browser Geolocation API,Get live GPS from driver’s phone browser,"No native app needed, works on Chrome/Safari",Free (browser feature)
+Admin Dashboard,Laravel Breeze / Filament,"Manage drivers, schools, zones",Rapid admin panel setup,Filament: open-source free tier
+Monitoring,Laravel Telescope (dev),"Debug requests, jobs, queries",Built-in debugging tool,Free

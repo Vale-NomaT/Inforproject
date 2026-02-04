@@ -1,0 +1,67 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --color-custom-50: #eff6ff;
+    --color-custom-100: #dbeafe;
+    --color-custom-200: #bfdbfe;
+    --color-custom-300: #93c5fd;
+    --color-custom-400: #60a5fa;
+    --color-custom-500: #3b82f6;
+    --color-custom-600: #2563eb;
+    --color-custom-700: #1d4ed8;
+    --color-custom-800: #1e40af;
+    --color-custom-900: #1e3a8a;
+    --color-custom-950: #172554;
+
+    --color-topbar: #ffffff;
+    --color-topbar-dark: #1e293b;
+    --color-topbar-border: #e2e8f0;
+    --color-topbar-border-dark: #334155;
+    --color-topbar-item: #64748b;
+    --color-topbar-item-dark: #cbd5e1;
+    --color-topbar-item-hover: #3b82f6;
+    --color-topbar-item-hover-dark: #60a5fa;
+    --color-topbar-item-bg-hover: #f1f5f9;
+    --color-topbar-item-bg-hover-dark: #334155;
+
+    --color-vertical-menu: #ffffff;
+    --color-vertical-menu-dark: #1e293b;
+    --color-vertical-menu-border: #e2e8f0;
+    --color-vertical-menu-border-dark: #334155;
+    --color-vertical-menu-item: #64748b;
+    --color-vertical-menu-item-dark: #cbd5e1;
+    --color-vertical-menu-item-hover: #3b82f6;
+    --color-vertical-menu-item-hover-dark: #60a5fa;
+    --color-vertical-menu-item-active: #3b82f6;
+    --color-vertical-menu-item-active-dark: #60a5fa;
+    --color-vertical-menu-item-bg-active: #eff6ff;
+    --color-vertical-menu-item-bg-active-dark: #1e293b;
+
+    --color-body-bg: #f8fafc;
+    --color-body-bordered: #f1f5f9;
+
+    --color-zink-50: #f8fafc;
+    --color-zink-100: #f1f5f9;
+    --color-zink-200: #e2e8f0;
+    --color-zink-300: #cbd5e1;
+    --color-zink-400: #94a3b8;
+    --color-zink-500: #64748b;
+    --color-zink-600: #475569;
+    --color-zink-700: #334155;
+    --color-zink-800: #1e293b;
+    --color-zink-900: #0f172a;
+    --color-zink-950: #020617;
+
+    --spacing-header: 4.375rem;
+    --spacing-vertical-menu: 16.25rem;
+    --spacing-vertical-menu-md: 16.25rem;
+    --spacing-vertical-menu-sm: 4.375rem;
+}
