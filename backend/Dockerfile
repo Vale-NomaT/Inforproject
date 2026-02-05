@@ -46,6 +46,20 @@ COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.con
 # Copy Supervisor config
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
+# Set environment variables for Reverb and Pusher
+ENV REVERB_APP_ID=100001
+ENV REVERB_APP_KEY=saferide_key
+ENV REVERB_APP_SECRET=saferide_secret
+ENV REVERB_HOST=saferidekids.onrender.com
+ENV REVERB_PORT=443
+ENV REVERB_SCHEME=https
+ENV REVERB_SERVER_PORT=8080
+
+ENV VITE_PUSHER_APP_KEY=saferide_key
+ENV VITE_PUSHER_HOST=saferidekids.onrender.com
+ENV VITE_PUSHER_PORT=443
+ENV VITE_PUSHER_SCHEME=https
+
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
 
