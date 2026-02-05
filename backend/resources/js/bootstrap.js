@@ -14,14 +14,22 @@ import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 window.Pusher = Pusher;
 
+// Use runtime config if available, otherwise fall back to build-time env
+const reverbConfig = window.ReverbConfig || {
+    appKey: import.meta.env.VITE_PUSHER_APP_KEY,
+    host: import.meta.env.VITE_PUSHER_HOST,
+    port: import.meta.env.VITE_PUSHER_PORT,
+    scheme: import.meta.env.VITE_PUSHER_SCHEME
+};
+
 window.Echo = new Echo({
     broadcaster: 'pusher',
-    key: import.meta.env.VITE_PUSHER_APP_KEY,
-    cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER,
-    wsHost: import.meta.env.VITE_PUSHER_HOST ? import.meta.env.VITE_PUSHER_HOST : `ws-${import.meta.env.VITE_PUSHER_APP_CLUSTER}.pusher.com`,
-    wsPort: import.meta.env.VITE_PUSHER_PORT ?? 80,
-    wssPort: import.meta.env.VITE_PUSHER_PORT ?? 443,
-    forceTLS: (import.meta.env.VITE_PUSHER_SCHEME ?? 'https') === 'https',
+    key: reverbConfig.appKey,
+    cluster: 'mt1',
+    wsHost: reverbConfig.host,
+    wsPort: reverbConfig.port ?? 80,
+    wssPort: reverbConfig.port ?? 443,
+    forceTLS: (reverbConfig.scheme ?? 'https') === 'https',
     enabledTransports: ['ws', 'wss'],
 });
 
