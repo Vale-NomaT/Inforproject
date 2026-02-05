@@ -11,7 +11,8 @@ RUN apt-get update && apt-get install -y \
     unzip \
     libpq-dev \
     nodejs \
-    npm
+    npm \
+    supervisor
 
 # Clear cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -36,8 +37,14 @@ ENV APACHE_DOCUMENT_ROOT /var/www/html/public
 RUN sed -ri -e 's!/var/www/html!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/sites-available/*.conf
 RUN sed -ri -e 's!/var/www/!${APACHE_DOCUMENT_ROOT}!g' /etc/apache2/apache2.conf /etc/apache2/conf-available/*.conf
 
-# Enable Apache mod_rewrite
-RUN a2enmod rewrite
+# Enable Apache mod_rewrite and proxy modules for Reverb
+RUN a2enmod rewrite proxy proxy_http proxy_wstunnel
+
+# Copy custom Apache config
+COPY docker/apache/000-default.conf /etc/apache2/sites-available/000-default.conf
+
+# Copy Supervisor config
+COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 # Install PHP dependencies
 RUN composer install --no-dev --optimize-autoloader
@@ -48,5 +55,5 @@ RUN npm install && npm run build
 # Expose port 80
 EXPOSE 80
 
-# Run migration and start Apache
-CMD php artisan migrate --force && apache2-foreground
+# Run migration and start Supervisor
+CMD php artisan migrate --force && /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
