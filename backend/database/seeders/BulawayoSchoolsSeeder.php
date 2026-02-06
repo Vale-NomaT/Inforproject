@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Models\School;
 
 class BulawayoSchoolsSeeder extends Seeder
@@ -13,11 +14,11 @@ class BulawayoSchoolsSeeder extends Seeder
      */
     public function run(): void
     {
-        // Disable foreign key checks to allow truncation
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        // Disable foreign key checks to allow truncation (Database Agnostic)
+        Schema::disableForeignKeyConstraints();
         School::truncate();
         DB::table('driver_schools')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+        Schema::enableForeignKeyConstraints();
 
         $schools = [
             // Primary Schools
