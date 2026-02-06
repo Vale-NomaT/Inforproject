@@ -239,6 +239,7 @@
             // Add Search Control
             const searchControl = L.Control.geocoder({
                 defaultMarkGeocode: false,
+                collapsed: false, /* Keep search bar open */
                 geocoder: geocoder,
                 placeholder: "Search for address...",
                 errorMessage: "Nothing found."
@@ -266,6 +267,9 @@
             const lng = document.getElementById('custom_lng').value;
             if (lat && lng) {
                 pickupMap.setView([lat, lng], 17);
+            } else {
+                // Auto-detect location if no value set
+                useCurrentLocation();
             }
         }, 100);
     }

@@ -238,6 +238,7 @@
             // Add Search Control (but we'll use it to move the map, not just drop a marker)
             const searchControl = L.Control.geocoder({
                 defaultMarkGeocode: false,
+                collapsed: false, /* Keep search bar open for easier access */
                 geocoder: geocoder,
                 placeholder: "Search for address...",
                 errorMessage: "Nothing found."
@@ -266,6 +267,9 @@
             const lng = document.getElementById('custom_lng').value;
             if (lat && lng) {
                 pickupMap.setView([lat, lng], 17);
+            } else {
+                // Auto-detect location if no value set (User Request: "map should be already showing the live location")
+                useCurrentLocation();
             }
         }, 100);
     }
