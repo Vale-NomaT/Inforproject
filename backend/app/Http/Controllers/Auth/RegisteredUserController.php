@@ -56,7 +56,11 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
         
         // Send Welcome Email
-        Mail::to($user)->send(new WelcomeEmail($user));
+        try {
+            Mail::to($user)->send(new WelcomeEmail($user));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send welcome email to parent: ' . $e->getMessage());
+        }
 
         Auth::login($user);
 
@@ -107,7 +111,11 @@ class RegisteredUserController extends Controller
         event(new Registered($user));
 
         // Send Welcome Email
-        Mail::to($user)->send(new WelcomeEmail($user));
+        try {
+            Mail::to($user)->send(new WelcomeEmail($user));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send welcome email to driver: ' . $e->getMessage());
+        }
 
         Auth::login($user);
 
