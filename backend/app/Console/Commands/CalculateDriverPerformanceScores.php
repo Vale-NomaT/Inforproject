@@ -17,7 +17,9 @@ class CalculateDriverPerformanceScores extends Command
 
     public function handle(): int
     {
+        $this->info('Starting driver performance score calculation...');
         $drivers = User::where('user_type', 'driver')->get();
+        $this->info("Found {$drivers->count()} drivers to process.");
 
         foreach ($drivers as $driver) {
             $tripQuery = Trip::where('driver_id', $driver->id);
@@ -60,8 +62,11 @@ class CalculateDriverPerformanceScores extends Command
                     'calculated_at' => now(),
                 ]
             );
+            
+            $this->info("Updated score for driver ID {$driver->id}: {$score}");
         }
 
+        $this->info('Driver performance score calculation completed.');
         return Command::SUCCESS;
     }
 }
