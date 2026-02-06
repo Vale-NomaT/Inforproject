@@ -5,6 +5,8 @@ use App\Http\Controllers\AdminDriverController;
 use App\Http\Controllers\AdminReportController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Auth\NewPasswordController;
+use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\DriverBookingController;
 use App\Http\Controllers\DriverDashboardController;
@@ -30,6 +32,22 @@ Route::post('/login', [AuthenticatedSessionController::class, 'store'])
 Route::post('/logout', [AuthenticatedSessionController::class, 'destroy'])
     ->name('logout')
     ->middleware('auth');
+
+Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])
+    ->middleware('guest')
+    ->name('password.request');
+
+Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
+    ->middleware('guest')
+    ->name('password.email');
+
+Route::get('/reset-password/{token}', [NewPasswordController::class, 'create'])
+    ->middleware('guest')
+    ->name('password.reset');
+
+Route::post('/reset-password', [NewPasswordController::class, 'store'])
+    ->middleware('guest')
+    ->name('password.store');
 
 Route::get('/register/parent', [RegisteredUserController::class, 'createParent'])
     ->name('register.parent')

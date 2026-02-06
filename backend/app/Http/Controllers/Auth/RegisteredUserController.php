@@ -15,6 +15,9 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
+use App\Mail\WelcomeEmail;
+use Illuminate\Support\Facades\Mail;
+
 class RegisteredUserController extends Controller
 {
     public function createParent(): View
@@ -32,9 +35,7 @@ class RegisteredUserController extends Controller
             'password' => ['required', 'confirmed', 'min:8'],
         ]);
 
-        $user = null;
-
-        DB::transaction(function () use (&$user, $data): void {
+        $user = DB::transaction(function () use ($data) {
             $user = User::create([
                 'name' => $data['name'] . ' ' . $data['surname'],
                 'email' => $data['email'],
@@ -48,9 +49,14 @@ class RegisteredUserController extends Controller
                 'phone' => $data['phone'],
                 'relationship_to_child' => 'Parent', // Default value since we simplified the form
             ]);
+
+            return $user;
         });
 
         event(new Registered($user));
+        
+        // Send Welcome Email
+        Mail::to($user)->send(new WelcomeEmail($user));
 
         Auth::login($user);
 
@@ -76,9 +82,7 @@ class RegisteredUserController extends Controller
             'max_child_capacity' => ['required', 'integer', 'min:1', 'max:50'],
         ]);
 
-        $user = null;
-
-        DB::transaction(function () use (&$user, $data): void {
+        $user = DB::transaction(function () use ($data) {
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -96,9 +100,14 @@ class RegisteredUserController extends Controller
                 'vehicle_model' => $data['vehicle_model'] ?? null,
                 'max_child_capacity' => $data['max_child_capacity'],
             ]);
+
+            return $user;
         });
 
         event(new Registered($user));
+
+        // Send Welcome Email
+        Mail::to($user)->send(new WelcomeEmail($user));
 
         Auth::login($user);
 
