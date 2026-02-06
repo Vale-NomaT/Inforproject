@@ -4,7 +4,15 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
 <style>
-    #pickup_map { height: 300px; width: 100%; z-index: 1; }
+    #pickup_map { height: 300px; width: 100%; z-index: 1; position: relative; }
+    .map-center-pin {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -100%); /* Point to the exact center */
+        z-index: 1000; /* Above map tiles */
+        pointer-events: none; /* Let clicks pass through to map if needed */
+    }
 </style>
 @endpush
 
@@ -150,8 +158,13 @@
                                     <span id="location_status" class="text-sm text-slate-500"></span>
                                 </div>
 
-                                <div id="pickup_map" class="w-full h-64 rounded-lg border border-slate-200 dark:border-zink-500 z-0"></div>
-                                <p class="text-xs text-slate-500">Click on the map to select a location.</p>
+                                <div id="pickup_map" class="w-full h-64 rounded-lg border border-slate-200 dark:border-zink-500 z-0">
+                                    <!-- Center Pin Icon -->
+                                    <div class="map-center-pin">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="#ef4444" stroke="#7f1d1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin drop-shadow-lg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3" fill="white"/></svg>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-500">Drag the map to position the pin at your pickup location.</p>
 
                                 <input type="hidden" id="custom_lat" name="custom_lat" value="{{ old('custom_lat') }}">
                                 <input type="hidden" id="custom_lng" name="custom_lng" value="{{ old('custom_lng') }}">
@@ -205,7 +218,8 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
 <script>
-    let pickupMap, pickupMarker;
+    let pickupMap;
+    let geocoder;
 
     function initPickupMap() {
         // Default to Bulawayo if no location selected
@@ -213,44 +227,78 @@
         const defaultLng = 28.5833;
         
         if (!pickupMap) {
-            pickupMap = L.map('pickup_map').setView([defaultLat, defaultLng], 12);
+            pickupMap = L.map('pickup_map').setView([defaultLat, defaultLng], 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 maxZoom: 19,
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(pickupMap);
 
-            // Add Geocoder Control
-            L.Control.geocoder({
-                defaultMarkGeocode: false
+            // Initialize Geocoder
+            geocoder = L.Control.Geocoder.nominatim();
+
+            // Add Search Control
+            const searchControl = L.Control.geocoder({
+                defaultMarkGeocode: false,
+                geocoder: geocoder,
+                placeholder: "Search for address...",
+                errorMessage: "Nothing found."
             })
             .on('markgeocode', function(e) {
                 const latlng = e.geocode.center;
-                setPickupLocation(latlng.lat, latlng.lng);
-                pickupMap.setView(latlng, 16);
+                pickupMap.setView(latlng, 17);
             })
             .addTo(pickupMap);
 
-            pickupMap.on('click', function(e) {
-                setPickupLocation(e.latlng.lat, e.latlng.lng);
+            // Listen for map movement to update coordinates
+            pickupMap.on('moveend', function() {
+                updateLocationFromMap();
             });
+
+            // Initial update
+            updateLocationFromMap();
         }
         
         // Invalidate size to ensure map renders correctly if it was hidden
         setTimeout(() => {
             pickupMap.invalidateSize();
+            // If we have existing values, center map there
+            const lat = document.getElementById('custom_lat').value;
+            const lng = document.getElementById('custom_lng').value;
+            if (lat && lng) {
+                pickupMap.setView([lat, lng], 17);
+            }
         }, 100);
     }
 
-    function setPickupLocation(lat, lng) {
-        document.getElementById('custom_lat').value = lat;
-        document.getElementById('custom_lng').value = lng;
-
-        if (pickupMarker) {
-            pickupMap.removeLayer(pickupMarker);
-        }
+    function updateLocationFromMap() {
+        const center = pickupMap.getCenter();
+        document.getElementById('custom_lat').value = center.lat;
+        document.getElementById('custom_lng').value = center.lng;
         
-        pickupMarker = L.marker([lat, lng]).addTo(pickupMap);
-        pickupMap.setView([lat, lng], 15);
+        // Reverse Geocoding to get address
+        geocoder.reverse(center, pickupMap.options.crs.scale(pickupMap.getZoom()), function(results) {
+            const r = results[0];
+            if (r) {
+                const nameInput = document.getElementById('custom_location_name');
+                // Only auto-fill if empty or previously auto-filled
+                if (!nameInput.value || nameInput.getAttribute('data-autofilled') === 'true') {
+                    nameInput.value = r.name || r.html || 'Selected Location';
+                    nameInput.setAttribute('data-autofilled', 'true');
+                }
+            }
+        });
+    }
+
+    // Handle manual input change to stop overwriting
+    document.getElementById('custom_location_name')?.addEventListener('input', function() {
+        this.setAttribute('data-autofilled', 'false');
+    });
+
+    function setPickupLocation(lat, lng) {
+        // Legacy function support
+        if (pickupMap) {
+            pickupMap.setView([lat, lng], 17);
+        }
     }
 
     function togglePickupType() {
@@ -263,7 +311,6 @@
         if (type === 'existing') {
             existingContainer.classList.remove('hidden');
             customContainer.classList.add('hidden');
-            // Enable validation for existing
             if(pickupSelect) pickupSelect.required = true;
             if(customNameInput) customNameInput.required = false;
         } else {
@@ -292,10 +339,8 @@
             const lng = position.coords.longitude;
             status.textContent = 'Location found!';
             
-            // Ensure map is initialized
             if (!pickupMap) initPickupMap();
-            
-            setPickupLocation(lat, lng);
+            pickupMap.setView([lat, lng], 17);
         }, () => {
             status.textContent = 'Unable to retrieve your location';
         });
@@ -305,11 +350,6 @@
     document.addEventListener('DOMContentLoaded', function() {
         if (document.querySelector('input[name="pickup_type"]:checked').value === 'custom') {
             initPickupMap();
-            const lat = document.getElementById('custom_lat').value;
-            const lng = document.getElementById('custom_lng').value;
-            if (lat && lng) {
-                setPickupLocation(lat, lng);
-            }
         }
     });
 </script>
