@@ -38,29 +38,24 @@
                         <h6 class="mb-3 text-15 text-slate-800 dark:text-zink-50 font-semibold">1. Pickup Zones (Locations)</h6>
                         <p class="mb-3 text-sm text-slate-500 dark:text-zink-200">Select the zones you are willing to drive to.</p>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            @forelse($locations as $location)
-                                <div class="relative flex items-start">
-                                    <div class="flex items-center h-5">
-                                        <input 
-                                            id="location_{{ $location->id }}" 
-                                            name="locations[]" 
-                                            value="{{ $location->id }}" 
-                                            type="checkbox" 
-                                            class="form-checkbox border-slate-200 dark:border-zink-500 focus:border-custom-500 focus:ring-custom-500 text-custom-500 rounded"
-                                            {{ $driverProfile->locations->contains($location->id) ? 'checked' : '' }}
-                                        >
-                                    </div>
-                                    <div class="ml-3 text-sm">
-                                        <label for="location_{{ $location->id }}" class="font-medium text-slate-700 dark:text-zink-100 select-none cursor-pointer">
-                                            {{ $location->name }}
-                                        </label>
-                                        <p class="text-slate-500 dark:text-zink-200 text-xs">{{ $location->city }}</p>
-                                    </div>
-                                </div>
-                            @empty
-                                <p class="text-sm text-slate-500 dark:text-zink-200 col-span-full">No active locations found.</p>
-                            @endforelse
+                        <div class="mt-3">
+                            <select 
+                                name="locations[]" 
+                                id="locations" 
+                                data-choices 
+                                data-choices-removeItem 
+                                multiple 
+                                class="form-select border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500"
+                            >
+                                @foreach($locations as $location)
+                                    <option value="{{ $location->id }}" {{ $driverProfile->locations->contains($location->id) ? 'selected' : '' }}>
+                                        {{ $location->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @if($locations->isEmpty())
+                                <p class="mt-2 text-sm text-slate-500 dark:text-zink-200">No active locations found.</p>
+                            @endif
                         </div>
                     </div>
 

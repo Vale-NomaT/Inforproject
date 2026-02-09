@@ -129,8 +129,8 @@
                                 </label>
                             </div>
 
-                            <div id="existing_pickup_container" class="{{ old('pickup_type', 'existing') == 'existing' ? '' : 'hidden' }}">
-                                <select id="pickup_location_id" name="pickup_location_id" class="form-select border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200">
+                            <div id="existing_pickup_container" class="{{ old('pickup_type', $child->pickup_location_id ? 'existing' : 'custom') == 'existing' ? '' : 'hidden' }}">
+                                <select id="pickup_location_id" name="pickup_location_id" data-choices class="form-select border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200">
                                     <option value="">Select Pickup Location</option>
                                     @foreach($pickupLocations as $location)
                                         <option value="{{ $location->id }}" {{ old('pickup_location_id', $child->pickup_location_id) == $location->id ? 'selected' : '' }}>{{ $location->name }}</option>

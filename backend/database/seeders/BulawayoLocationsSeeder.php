@@ -19,171 +19,62 @@ class BulawayoLocationsSeeder extends Seeder
         DB::table('driver_locations')->truncate();
         DB::statement('SET FOREIGN_KEY_CHECKS=1;');
 
-        $locations = [
-            [
-                'name' => 'Bulawayo City Hall',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.155300,
-                'lng' => 28.581300,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Bradfield Shopping Centre',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.173000,
-                'lng' => 28.591000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Hillside Dams Conservancy',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.198000,
-                'lng' => 28.615000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Ascot Shopping Centre',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.149000,
-                'lng' => 28.604000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'North End',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.130000,
-                'lng' => 28.590000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Suburbs',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.165000,
-                'lng' => 28.595000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Kumalo',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.145000,
-                'lng' => 28.600000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Famona',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.170000,
-                'lng' => 28.580000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Paddonhurst',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.135000,
-                'lng' => 28.570000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Sauerstown',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.115000,
-                'lng' => 28.575000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Belmont Industrial',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.175000,
-                'lng' => 28.565000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Donnington',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.185000,
-                'lng' => 28.570000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Morningside',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.180000,
-                'lng' => 28.600000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Burnside',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.210000,
-                'lng' => 28.617000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Woodlands',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.190000,
-                'lng' => 28.625000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Ilanda',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.185000,
-                'lng' => 28.615000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Malindela',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.180000,
-                'lng' => 28.590000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Barham Green',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.175000,
-                'lng' => 28.575000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Montrose',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.195000,
-                'lng' => 28.585000,
-                'is_active' => true,
-            ],
-            [
-                'name' => 'Southwold',
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => -20.190000,
-                'lng' => 28.575000,
-                'is_active' => true,
-            ],
+        $suburbs = [
+            'Ascot', 'Barham Green', 'Beacon Hill', 'Bellevue', 'Belmont', 'Bradfield', 'Burnside', 'Cement', 
+            'Cowdray Park', 'Donnington', 'Douglasdale', 'Eloana', 'Emakhandeni', 'Emganwini', 'Enqameni', 
+            'Entumbane', 'Famona', 'Four Winds', 'Glengarry', 'Glenville', 'Granite Park', 'Greenhill', 
+            'Gwabalanda', 'Harrisvale', 'Highmount', 'Hillcrest', 'Hillside', 'Hillside South', 'Hume Park', 
+            'Hyde Park', 'Ilanda', 'Iminyela', 'Intinta', 'Jacaranda', 'Kelvin', 'Kenilworth', 'Khumalo', 
+            'Kilmarnock', 'Kingsdale', 'Killarney', 'Kumalo', 'Lakeside', 'Lobenvale', 'Lochview', 'Luveve', 
+            'Mabuthweni', 'Magwegwe', 'Magwegwe North', 'Magwegwe West', 'Mahatshula', 'Makhandeni', 
+            'Makokoba', 'Malindela', 'Manningdale', 'Marimba', 'Matsheumhlope', 'Matshobana', 'Mganwini', 
+            'Montrose', 'Morningside', 'Mpopoma', 'Mzilikazi', 'New Luveve', 'New Parklands', 'Newton West', 
+            'Nguboyenja', 'Nketa', 'Nkulumane', 'North End', 'North Trenance', 'Northvale', 'Old Luveve', 
+            'Old Magwegwe', 'Old Nic', 'Old Pumula', 'Paddonhurst', 'Parklands', 'Parkview', 'Pelandaba', 
+            'Pelandaba West', 'Pumula', 'Pumula East', 'Pumula North', 'Pumula South', 'Queens Park', 
+            'Queens Park East', 'Queens Park West', 'Rangemore', 'Raylton', 'Richmond', 'Riverside', 
+            'Romney Park', 'Sauerstown', 'Selborne Park', 'Sizinda', 'Southwold', 'Steeldale', 'Suburbs', 
+            'Sunnyside', 'Tegela', 'The Jungle', 'Thorngrove', 'Trenance', 'Tshabalala', 'Upper Rangemore', 
+            'Waterford', 'West Somerton', 'Westgate', 'Westondale', 'Whitestone', 'Windsor Park', 'Woodlands', 
+            'Worringham'
         ];
 
-        foreach ($locations as $loc) {
-            Location::create($loc);
+        $locations = [];
+        // Base coordinates for Bulawayo
+        $baseLat = -20.155300;
+        $baseLng = 28.581300;
+
+        foreach ($suburbs as $index => $suburb) {
+            $locations[] = [
+                'name' => $suburb,
+                'city' => 'Bulawayo',
+                'country' => 'Zimbabwe',
+                // Add small variation to separate points on map slightly, 
+                // though real coords would be better, this prevents stacking exactly on one spot
+                'lat' => $baseLat + (mt_rand(-500, 500) / 10000), 
+                'lng' => $baseLng + (mt_rand(-500, 500) / 10000),
+                'is_active' => true,
+            ];
         }
+
+        // Add specific key locations with more accurate coords if known (overwriting generic ones if needed)
+        $specifics = [
+            ['name' => 'Bulawayo City Hall', 'lat' => -20.155300, 'lng' => 28.581300],
+            ['name' => 'Bradfield Shopping Centre', 'lat' => -20.173000, 'lng' => 28.591000],
+            ['name' => 'Hillside Dams Conservancy', 'lat' => -20.198000, 'lng' => 28.615000],
+        ];
+
+        foreach ($specifics as $spec) {
+            $locations[] = [
+                'name' => $spec['name'],
+                'city' => 'Bulawayo',
+                'country' => 'Zimbabwe',
+                'lat' => $spec['lat'],
+                'lng' => $spec['lng'],
+                'is_active' => true,
+            ];
+        }
+
+        Location::insert($locations);
     }
 }
