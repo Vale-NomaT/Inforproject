@@ -437,7 +437,7 @@
     <script src="{{ asset('assets/libs/simplebar/simplebar.min.js') }}"></script>
     <script src="{{ asset('assets/libs/prismjs/prism.js') }}"></script>
     <script src="{{ asset('assets/libs/lucide/umd/lucide.js') }}"></script>
-    <script src="{{ asset('assets/js/starcode.bundle.js') }}"></script>
+    <script src="{{ asset('assets/js/saferide.bundle.js') }}"></script>
     <script src="{{ asset('assets/libs/flatpickr/flatpickr.min.js') }}"></script>
     <!--apexchart js-->
     <script src="{{ asset('assets/libs/apexcharts/apexcharts.min.js') }}"></script>

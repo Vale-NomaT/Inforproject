@@ -10,7 +10,8 @@ class DriverMatchingService
 {
     public function findDriversForChild(Child $child): Collection
     {
-        return DriverProfile::query()
+        $drivers = DriverProfile::query()
+            ->select('drivers.*')
             ->join('users', 'drivers.id', '=', 'users.id')
             ->where('users.status', 'active')
             ->where('users.user_type', 'driver')
@@ -20,8 +21,14 @@ class DriverMatchingService
             ->whereHas('schools', function ($query) use ($child): void {
                 $query->where('schools.id', $child->school_id);
             })
-            ->select('drivers.*')
-            ->distinct()
-            ->get();
+            ->withCount(['bookingRequests' => function ($query) {
+                $query->where('status', 'approved');
+            }])
+            ->get()
+            ->filter(function ($driver) {
+                return $driver->max_child_capacity > $driver->booking_requests_count;
+            });
+
+        return new Collection($drivers);
     }
 }

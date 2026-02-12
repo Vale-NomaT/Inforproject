@@ -66,29 +66,32 @@
                         <h6 class="mb-3 text-15 text-slate-800 dark:text-zink-50 font-semibold">2. Schools</h6>
                         <p class="mb-3 text-sm text-slate-500 dark:text-zink-200">Select the schools you are willing to drop off at / pick up from.</p>
                         
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                            @forelse($schools as $school)
-                                <div class="relative flex items-start">
-                                    <div class="flex items-center h-5">
-                                        <input 
-                                            id="school_{{ $school->id }}" 
-                                            name="schools[]" 
-                                            value="{{ $school->id }}" 
-                                            type="checkbox" 
-                                            class="form-checkbox border-slate-200 dark:border-zink-500 focus:border-custom-500 focus:ring-custom-500 text-custom-500 rounded"
-                                            {{ $driverProfile->schools->contains($school->id) ? 'checked' : '' }}
-                                        >
-                                    </div>
-                                    <div class="ml-3 text-sm">
-                                        <label for="school_{{ $school->id }}" class="font-medium text-slate-700 dark:text-zink-100 select-none cursor-pointer">
-                                            {{ $school->name }}
-                                        </label>
-                                        <p class="text-slate-500 dark:text-zink-200 text-xs">{{ $school->city }}</p>
-                                    </div>
-                                </div>
-                            @empty
-                                <p class="text-sm text-slate-500 dark:text-zink-200 col-span-full">No active schools found.</p>
-                            @endforelse
+                        <div class="mt-3">
+                            <select 
+                                name="schools[]" 
+                                id="schools" 
+                                data-choices 
+                                data-choices-removeItem 
+                                multiple 
+                                class="form-select border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500"
+                            >
+                                @php
+                                    $schoolsByCity = $schools->groupBy('city');
+                                @endphp
+
+                                @foreach($schoolsByCity as $city => $citySchools)
+                                    <optgroup label="{{ $city }}">
+                                        @foreach($citySchools as $school)
+                                            <option value="{{ $school->id }}" {{ $driverProfile->schools->contains($school->id) ? 'selected' : '' }}>
+                                                {{ $school->name }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
+                                @endforeach
+                            </select>
+                            @if($schools->isEmpty())
+                                <p class="mt-2 text-sm text-slate-500 dark:text-zink-200">No active schools found.</p>
+                            @endif
                         </div>
                     </div>
 
