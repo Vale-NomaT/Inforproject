@@ -69,5 +69,9 @@ RUN npm install && npm run build
 # Expose port 80
 EXPOSE 80
 
-# Run migration and start Supervisor
-CMD php artisan migrate --force && /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+# Copy entrypoint script
+COPY docker/entrypoint.sh /usr/local/bin/start-container
+RUN chmod +x /usr/local/bin/start-container
+
+# Run entrypoint
+CMD ["/usr/local/bin/start-container"]
