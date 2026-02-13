@@ -29,6 +29,7 @@ class DriverTripController extends Controller
             ->where('driver_id', $request->user()->id)
             ->whereIn('status', [Trip::STATUS_SCHEDULED, Trip::STATUS_IN_PROGRESS])
             ->orderBy('scheduled_date')
+            ->orderByDesc('type') // Morning first
             ->get();
 
         return view('driver.trips', compact('trips'));
@@ -40,6 +41,7 @@ class DriverTripController extends Controller
             ->where('driver_id', $request->user()->id)
             ->whereIn('status', [Trip::STATUS_SCHEDULED, Trip::STATUS_IN_PROGRESS])
             ->whereDate('scheduled_date', now())
+            ->orderByDesc('type') // Morning first
             ->get();
 
         return view('driver.map', compact('trips'));

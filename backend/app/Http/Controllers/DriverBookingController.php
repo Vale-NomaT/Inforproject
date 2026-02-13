@@ -68,10 +68,23 @@ class DriverBookingController extends Controller
 
         foreach ($period as $date) {
             if ($date->isWeekday()) {
+                // Morning Trip (Home -> School)
                 Trip::firstOrCreate([
                     'driver_id' => $booking->driver_id,
                     'child_id' => $booking->child_id,
                     'scheduled_date' => $date->format('Y-m-d'),
+                    'type' => Trip::TYPE_MORNING,
+                ], [
+                    'status' => Trip::STATUS_SCHEDULED,
+                    'pricing_tier' => $booking->pricing_tier,
+                ]);
+
+                // Afternoon Trip (School -> Home)
+                Trip::firstOrCreate([
+                    'driver_id' => $booking->driver_id,
+                    'child_id' => $booking->child_id,
+                    'scheduled_date' => $date->format('Y-m-d'),
+                    'type' => Trip::TYPE_AFTERNOON,
                 ], [
                     'status' => Trip::STATUS_SCHEDULED,
                     'pricing_tier' => $booking->pricing_tier,

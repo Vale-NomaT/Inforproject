@@ -14,11 +14,16 @@ class Trip extends Model
 
     const STATUS_COMPLETED = 'completed';
 
+    const TYPE_MORNING = 'morning';
+
+    const TYPE_AFTERNOON = 'afternoon';
+
     protected $fillable = [
         'driver_id',
         'child_id',
         'scheduled_date',
         'status',
+        'type',
         'distance_km',
         'pricing_tier',
     ];

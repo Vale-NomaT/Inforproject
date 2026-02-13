@@ -16,9 +16,25 @@
         <div class="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
             <div class="card">
                 <div class="card-body">
+                    @php
+                        $isMorning = $trip->type === 'morning';
+                        $pickupName = $child->pickup_address ?? ($child->pickupLocation ? $child->pickupLocation->name : 'Home');
+                        $schoolName = $child->school->name;
+                    @endphp
+
                     @if ($child->pickupLocation && $child->school)
                         <p class="mb-4 text-slate-500 dark:text-zink-200">
-                            Route: <span class="font-medium text-slate-800 dark:text-zink-50">{{ $child->pickupLocation->name }} &rarr; {{ $child->school->name }}</span>
+                            Route: 
+                            <span class="font-medium text-slate-800 dark:text-zink-50">
+                                @if($isMorning)
+                                    {{ $pickupName }} &rarr; {{ $schoolName }}
+                                @else
+                                    {{ $schoolName }} &rarr; {{ $pickupName }}
+                                @endif
+                            </span>
+                            <span class="ml-2 px-2 py-0.5 text-xs font-medium rounded border {{ $isMorning ? 'bg-orange-100 text-orange-500 border-orange-200' : 'bg-purple-100 text-purple-500 border-purple-200' }}">
+                                {{ $isMorning ? 'Morning Run' : 'Afternoon Run' }}
+                            </span>
                         </p>
                     @endif
 
@@ -114,11 +130,44 @@
     let marker = null;
     let pathLine = null;
 
-    @if ($child->pickupLocation && $child->pickupLocation->lat && $child->pickupLocation->lng)
-    const initialLat = {{ (float) $child->pickupLocation->lat }};
-    const initialLng = {{ (float) $child->pickupLocation->lng }};
+    @php
+        $startLat = null;
+        $startLng = null;
+        $child = $trip->child;
+        $isMorning = $trip->type === 'morning';
+        
+        // Exact location takes precedence
+        $homeLat = $child->pickup_lat ?? ($child->pickupLocation ? $child->pickupLocation->lat : null);
+        $homeLng = $child->pickup_lng ?? ($child->pickupLocation ? $child->pickupLocation->lng : null);
+        
+        $schoolLat = $child->school->lat;
+        $schoolLng = $child->school->lng;
+
+        if ($isMorning) {
+            $startLat = $homeLat;
+            $startLng = $homeLng;
+        } else {
+            $startLat = $schoolLat;
+            $startLng = $schoolLng;
+        }
+    @endphp
+
+    @if ($startLat && $startLng)
+    const initialLat = {{ (float) $startLat }};
+    const initialLng = {{ (float) $startLng }};
     map.setView([initialLat, initialLng], 13);
-    marker = L.marker([initialLat, initialLng]).addTo(map);
+    
+    // Mark Start Point
+    L.marker([initialLat, initialLng]).addTo(map)
+      .bindPopup("Start Point");
+    
+    // Mark End Point
+    @if ($isMorning && $schoolLat && $schoolLng)
+       L.marker([{{ $schoolLat }}, {{ $schoolLng }}]).addTo(map).bindPopup("School (Drop-off)");
+    @elseif (!$isMorning && $homeLat && $homeLng)
+       L.marker([{{ $homeLat }}, {{ $homeLng }}]).addTo(map).bindPopup("Home (Drop-off)");
+    @endif
+
     @else
     map.setView([0, 0], 2);
     @endif

@@ -40,20 +40,44 @@
                         <div class="card-body">
                             <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                                 <div>
-                                    <h6 class="text-15 font-semibold text-slate-900 dark:text-zink-50 mb-1">
-                                        {{ $trip->child ? $trip->child->first_name . ' ' . $trip->child->last_name : 'Child' }}
-                                    </h6>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <h6 class="text-15 font-semibold text-slate-900 dark:text-zink-50">
+                                            {{ $trip->child ? $trip->child->first_name . ' ' . $trip->child->last_name : 'Child' }}
+                                        </h6>
+                                        @php
+                                            $isMorning = $trip->type === 'morning';
+                                            $typeLabel = $isMorning ? 'Morning Run' : 'Afternoon Run';
+                                            $typeClass = $isMorning 
+                                                ? 'bg-orange-100 text-orange-500 border-orange-200 dark:bg-orange-500/20 dark:border-orange-500/20' 
+                                                : 'bg-purple-100 text-purple-500 border-purple-200 dark:bg-purple-500/20 dark:border-purple-500/20';
+                                        @endphp
+                                        <span class="px-2 py-0.5 text-xs font-medium rounded border {{ $typeClass }}">
+                                            {{ $typeLabel }}
+                                        </span>
+                                    </div>
                                     <p class="text-slate-500 dark:text-zink-200 mb-1">
                                         Date: <span class="font-medium text-slate-800 dark:text-zink-50">
                                             {{ $trip->scheduled_date->format('l, M d, Y') }}
-                                            @if($trip->child && $trip->child->school_start_time)
+                                            @if($trip->child && $trip->child->school_start_time && $isMorning)
                                                 at {{ \Carbon\Carbon::parse($trip->child->school_start_time)->format('H:i') }}
+                                            @elseif($trip->child && $trip->child->school_end_time && !$isMorning)
+                                                at {{ \Carbon\Carbon::parse($trip->child->school_end_time)->format('H:i') }}
                                             @endif
                                         </span>
                                     </p>
                                     @if ($trip->child && $trip->child->pickupLocation && $trip->child->school)
+                                        @php
+                                            $pickupName = $trip->child->pickup_address ?? $trip->child->pickupLocation->name;
+                                        @endphp
                                         <p class="text-slate-500 dark:text-zink-200">
-                                            Route: <span class="font-medium text-slate-800 dark:text-zink-50">{{ $trip->child->pickupLocation->name }} &rarr; {{ $trip->child->school->name }}</span>
+                                            Route: 
+                                            <span class="font-medium text-slate-800 dark:text-zink-50">
+                                                @if($isMorning)
+                                                    {{ $pickupName }} &rarr; {{ $trip->child->school->name }}
+                                                @else
+                                                    {{ $trip->child->school->name }} &rarr; {{ $pickupName }}
+                                                @endif
+                                            </span>
                                         </p>
                                     @endif
                                 </div>

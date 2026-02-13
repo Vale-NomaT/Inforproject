@@ -18,6 +18,7 @@ class TripFactory extends Factory
             'driver_id' => User::factory()->state(['user_type' => 'driver']),
             'child_id' => Child::factory(),
             'scheduled_date' => fake()->date(),
+            'type' => fake()->randomElement(['morning', 'afternoon']),
             'status' => Trip::STATUS_SCHEDULED,
             'distance_km' => fake()->randomFloat(2, 2, 20),
             'pricing_tier' => fake()->randomElement(['tier1', 'tier2']),

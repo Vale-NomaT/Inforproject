@@ -22,13 +22,18 @@
                 <div class="card p-4 border border-slate-200 dark:border-zink-500">
                     <h6 class="font-semibold text-slate-800 dark:text-zink-50">{{ $trip->child->first_name }} {{ $trip->child->last_name }}</h6>
                     <div class="mt-2 space-y-2 text-sm text-slate-500 dark:text-zink-200">
-                        @if ($trip->child->pickupLocation)
+                        @php
+                            $pickupLat = $trip->child->pickup_lat ?? ($trip->child->pickupLocation ? $trip->child->pickupLocation->lat : null);
+                            $pickupLng = $trip->child->pickup_lng ?? ($trip->child->pickupLocation ? $trip->child->pickupLocation->lng : null);
+                            $pickupName = $trip->child->pickup_address ?? ($trip->child->pickupLocation ? $trip->child->pickupLocation->name : 'Pickup');
+                        @endphp
+                        @if ($pickupLat && $pickupLng)
                         <div class="flex items-start gap-2">
                             <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 text-green-500"></i>
                             <div>
-                                <span class="font-medium text-slate-700 dark:text-zink-100">Pickup:</span> {{ $trip->child->pickupLocation->name }}
+                                <span class="font-medium text-slate-700 dark:text-zink-100">Pickup:</span> {{ $pickupName }}
                                 <br>
-                                <a href="https://www.google.com/maps/dir/?api=1&destination={{ $trip->child->pickupLocation->lat }},{{ $trip->child->pickupLocation->lng }}" target="_blank" class="text-xs text-blue-500 hover:underline">Get Directions</a>
+                                <a href="https://www.google.com/maps/dir/?api=1&destination={{ $pickupLat }},{{ $pickupLng }}" target="_blank" class="text-xs text-blue-500 hover:underline">Get Directions</a>
                             </div>
                         </div>
                         @endif
@@ -73,41 +78,84 @@
         iconAnchor: [6, 6]
     });
 
-    const schoolIcon = L.divIcon({
+    const dropoffIcon = L.divIcon({
         className: 'custom-div-icon',
-        html: "<div style='background-color: #3b82f6; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.3);'></div>",
+        html: "<div style='background-color: #ef4444; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.3);'></div>",
         iconSize: [12, 12],
         iconAnchor: [6, 6]
     });
 
     @foreach ($trips as $trip)
-        @if ($trip->child->pickupLocation && $trip->child->pickupLocation->lat && $trip->child->pickupLocation->lng)
+        @php
+            $child = $trip->child;
+            $homeLat = $child->pickup_lat ?? ($child->pickupLocation ? $child->pickupLocation->lat : null);
+            $homeLng = $child->pickup_lng ?? ($child->pickupLocation ? $child->pickupLocation->lng : null);
+            $homeName = $child->pickup_address ?? ($child->pickupLocation ? $child->pickupLocation->name : 'Home');
+            
+            $schoolLat = $child->school->lat;
+            $schoolLng = $child->school->lng;
+            $schoolName = $child->school->name;
+
+            $isMorning = $trip->type === 'morning';
+
+            if ($isMorning) {
+                // Morning: Home -> School
+                $startLat = $homeLat;
+                $startLng = $homeLng;
+                $startName = $homeName;
+                $startDesc = "Pickup: " . $child->first_name;
+                
+                $endLat = $schoolLat;
+                $endLng = $schoolLng;
+                $endName = $schoolName;
+                $endDesc = "Drop-off: " . $child->school->name;
+            } else {
+                // Afternoon: School -> Home
+                $startLat = $schoolLat;
+                $startLng = $schoolLng;
+                $startName = $schoolName;
+                $startDesc = "Pickup: " . $child->first_name . " (School)";
+
+                $endLat = $homeLat;
+                $endLng = $homeLng;
+                $endName = $homeName;
+                $endDesc = "Drop-off: " . $child->first_name . " (Home)";
+            }
+        @endphp
+
+        @if ($startLat && $startLng)
             {
-                const lat = {{ $trip->child->pickupLocation->lat }};
-                const lng = {{ $trip->child->pickupLocation->lng }};
+                const lat = {{ $startLat }};
+                const lng = {{ $startLng }};
                 const marker = L.marker([lat, lng], {icon: pickupIcon}).addTo(map);
                 marker.bindPopup(`
-                    <strong>Pickup: {{ $trip->child->first_name }}</strong><br>
-                    {{ $trip->child->pickupLocation->name }}<br>
+                    <strong>{{ $startDesc }}</strong><br>
+                    {{ $startName }}<br>
                     <a href='https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}' target='_blank'>Get Directions</a>
                 `);
                 bounds.extend([lat, lng]);
-                pickupPoints.push(L.latLng(lat, lng));
+                
+                // Deduplicate pickup points for routing
+                const exists = pickupPoints.some(p => p.lat === lat && p.lng === lng);
+                if (!exists) {
+                    pickupPoints.push(L.latLng(lat, lng));
+                }
             }
         @endif
 
-        @if ($trip->child->school && $trip->child->school->lat && $trip->child->school->lng)
+        @if ($endLat && $endLng)
             {
-                const lat = {{ $trip->child->school->lat }};
-                const lng = {{ $trip->child->school->lng }};
-                const marker = L.marker([lat, lng], {icon: schoolIcon}).addTo(map);
+                const lat = {{ $endLat }};
+                const lng = {{ $endLng }};
+                // Avoid duplicates if multiple kids go to same school/dropoff
+                const marker = L.marker([lat, lng], {icon: dropoffIcon}).addTo(map);
                 marker.bindPopup(`
-                    <strong>School: {{ $trip->child->school->name }}</strong><br>
-                    Drop-off for {{ $trip->child->first_name }}
+                    <strong>{{ $endDesc }}</strong><br>
+                    {{ $endName }}
                 `);
                 bounds.extend([lat, lng]);
                 
-                // Avoid adding duplicate school points for routing if multiple kids go to same school
+                // Deduplicate dropoff points for routing
                 const exists = schoolPoints.some(p => p.lat === lat && p.lng === lng);
                 if (!exists) {
                     schoolPoints.push(L.latLng(lat, lng));
