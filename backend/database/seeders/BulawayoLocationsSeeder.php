@@ -13,11 +13,26 @@ class BulawayoLocationsSeeder extends Seeder
      */
     public function run(): void
     {
-        // Disable foreign key checks to allow truncation
-        DB::statement('SET FOREIGN_KEY_CHECKS=0;');
+        // Disable foreign key checks (Cross-DB compatible)
+        if (DB::getDriverName() === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = OFF');
+        } elseif (DB::getDriverName() === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+        } elseif (DB::getDriverName() === 'pgsql') {
+            DB::statement('SET session_replication_role = replica');
+        }
+
         Location::truncate();
         DB::table('driver_locations')->truncate();
-        DB::statement('SET FOREIGN_KEY_CHECKS=1;');
+
+        // Enable foreign key checks
+        if (DB::getDriverName() === 'sqlite') {
+            DB::statement('PRAGMA foreign_keys = ON');
+        } elseif (DB::getDriverName() === 'mysql') {
+            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+        } elseif (DB::getDriverName() === 'pgsql') {
+            DB::statement('SET session_replication_role = origin');
+        }
 
         $suburbs = [
             'Ascot', 'Barham Green', 'Beacon Hill', 'Bellevue', 'Belmont', 'Bradfield', 'Burnside', 'Cement', 
