@@ -14,7 +14,7 @@ class ParentChildController extends Controller
     public function create(): View
     {
         $schools = School::orderBy('name')->get();
-        $pickupLocations = Location::orderBy('name')->get();
+        $pickupLocations = Location::where('is_active', true)->orderBy('name')->get();
 
         return view('dashboard.children.create', [
             'schools' => $schools,
@@ -29,10 +29,10 @@ class ParentChildController extends Controller
             'last_name' => ['required', 'string', 'max:255'],
             'date_of_birth' => ['required', 'date', 'before_or_equal:-4 years', 'after:-15 years'],
             'school_id' => ['required', 'exists:schools,id'],
-            'pickup_location_id' => ['nullable', 'exists:locations,id', 'required_without:custom_lat'],
-            'custom_lat' => ['nullable', 'numeric', 'required_without:pickup_location_id'],
-            'custom_lng' => ['nullable', 'numeric', 'required_with:custom_lat'],
-            'custom_location_name' => ['nullable', 'string', 'required_with:custom_lat'],
+            'pickup_location_id' => ['required', 'exists:locations,id'],
+            'custom_lat' => ['required', 'numeric'],
+            'custom_lng' => ['required', 'numeric'],
+            'custom_location_name' => ['nullable', 'string'],
             'relationship' => ['required', 'string', 'in:Mother,Father,Guardian,Grandparent,Other'],
             'school_start_time' => ['required', 'date_format:H:i'],
             'school_end_time' => ['required', 'date_format:H:i', 'after:school_start_time'],
@@ -40,19 +40,13 @@ class ParentChildController extends Controller
             'medical_notes' => ['nullable', 'string'],
         ]);
 
-        if (empty($validated['pickup_location_id']) && !empty($validated['custom_lat'])) {
-            $location = Location::create([
-                'name' => $validated['custom_location_name'],
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => $validated['custom_lat'],
-                'lng' => $validated['custom_lng'],
-                'is_active' => true,
-            ]);
-            $validated['pickup_location_id'] = $location->id;
-        }
-
-        $child = new Child($validated);
+        $child = new Child();
+        $child->fill($validated);
+        // Map custom fields to new columns
+        $child->pickup_lat = $validated['custom_lat'];
+        $child->pickup_lng = $validated['custom_lng'];
+        $child->pickup_address = $validated['custom_location_name'] ?? 'Home';
+        
         $child->parent_id = $request->user()->id;
         $child->save();
 
@@ -67,7 +61,7 @@ class ParentChildController extends Controller
         }
 
         $schools = School::orderBy('name')->get();
-        $pickupLocations = Location::orderBy('name')->get();
+        $pickupLocations = Location::where('is_active', true)->orderBy('name')->get();
 
         return view('dashboard.children.edit', [
             'child' => $child,
@@ -87,10 +81,10 @@ class ParentChildController extends Controller
             'last_name' => ['required', 'string', 'max:255'],
             'date_of_birth' => ['required', 'date', 'before_or_equal:-4 years', 'after:-15 years'],
             'school_id' => ['required', 'exists:schools,id'],
-            'pickup_location_id' => ['nullable', 'exists:locations,id', 'required_without:custom_lat'],
-            'custom_lat' => ['nullable', 'numeric', 'required_without:pickup_location_id'],
-            'custom_lng' => ['nullable', 'numeric', 'required_with:custom_lat'],
-            'custom_location_name' => ['nullable', 'string', 'required_with:custom_lat'],
+            'pickup_location_id' => ['required', 'exists:locations,id'],
+            'custom_lat' => ['required', 'numeric'],
+            'custom_lng' => ['required', 'numeric'],
+            'custom_location_name' => ['nullable', 'string'],
             'relationship' => ['required', 'string', 'in:Mother,Father,Guardian,Grandparent,Other'],
             'school_start_time' => ['required', 'date_format:H:i'],
             'school_end_time' => ['required', 'date_format:H:i', 'after:school_start_time'],
@@ -98,21 +92,15 @@ class ParentChildController extends Controller
             'medical_notes' => ['nullable', 'string'],
         ]);
 
-        if (empty($validated['pickup_location_id']) && !empty($validated['custom_lat'])) {
-            $location = Location::create([
-                'name' => $validated['custom_location_name'],
-                'city' => 'Bulawayo',
-                'country' => 'Zimbabwe',
-                'lat' => $validated['custom_lat'],
-                'lng' => $validated['custom_lng'],
-                'is_active' => true,
-            ]);
-            $validated['pickup_location_id'] = $location->id;
-        }
+        $child->fill($validated);
+        // Map custom fields to new columns
+        $child->pickup_lat = $validated['custom_lat'];
+        $child->pickup_lng = $validated['custom_lng'];
+        $child->pickup_address = $validated['custom_location_name'] ?? $child->pickup_address ?? 'Home';
 
-        $child->update($validated);
+        $child->save();
 
         return redirect()->route('parent.dashboard')
-            ->with('status', 'Child details updated successfully!');
+            ->with('status', 'Child updated successfully!');
     }
 }

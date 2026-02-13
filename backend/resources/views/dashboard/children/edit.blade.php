@@ -115,23 +115,19 @@
                             </div>
                         </div>
 
-                        <div class="mt-4">
-                            <label class="inline-block mb-2 text-base font-medium">Pickup Location</label>
-                            
-                            <div class="flex flex-wrap gap-4 mb-3">
-                                <label class="flex items-center cursor-pointer">
-                                    <input type="radio" name="pickup_type" value="existing" class="w-4 h-4 text-custom-500 border-slate-200 focus:ring-custom-500 dark:bg-zink-700 dark:border-zink-500" {{ old('pickup_type', 'existing') == 'existing' ? 'checked' : '' }} onchange="togglePickupType()">
-                                    <span class="ml-2 text-slate-700 dark:text-zink-200">Select Existing Zone</span>
-                                </label>
-                                <label class="flex items-center cursor-pointer">
-                                    <input type="radio" name="pickup_type" value="custom" class="w-4 h-4 text-custom-500 border-slate-200 focus:ring-custom-500 dark:bg-zink-700 dark:border-zink-500" {{ old('pickup_type') == 'custom' ? 'checked' : '' }} onchange="togglePickupType()">
-                                    <span class="ml-2 text-slate-700 dark:text-zink-200">Pick on Map / Current Location</span>
-                                </label>
-                            </div>
-
-                            <div id="existing_pickup_container" class="{{ old('pickup_type', $child->pickup_location_id ? 'existing' : 'custom') == 'existing' ? '' : 'hidden' }}">
-                                <select id="pickup_location_id" name="pickup_location_id" data-choices class="form-select border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200">
-                                    <option value="">Select Pickup Location</option>
+                        <div class="mt-4 space-y-6">
+                            <!-- Step 1: Zone Selection for Matching -->
+                            <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 dark:bg-zink-700 dark:border-zink-500">
+                                <h6 class="mb-3 text-15 font-semibold text-slate-700 dark:text-zink-100 flex items-center gap-2">
+                                    <span class="flex items-center justify-center w-6 h-6 text-xs text-white bg-custom-500 rounded-full">1</span>
+                                    Select Pickup Zone (For Driver Matching)
+                                </h6>
+                                <p class="mb-3 text-sm text-slate-500 dark:text-zink-200">
+                                    Choose the general area where you live. This helps us find drivers who operate in your neighborhood.
+                                </p>
+                                <label for="pickup_location_id" class="inline-block mb-2 text-base font-medium">Pickup Zone</label>
+                                <select id="pickup_location_id" name="pickup_location_id" data-choices class="form-select border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200" required>
+                                    <option value="">Select Pickup Zone</option>
                                     @foreach($pickupLocations as $location)
                                         <option value="{{ $location->id }}" {{ old('pickup_location_id', $child->pickup_location_id) == $location->id ? 'selected' : '' }}>{{ $location->name }}</option>
                                     @endforeach
@@ -141,36 +137,47 @@
                                 @enderror
                             </div>
 
-                            <div id="custom_pickup_container" class="{{ old('pickup_type') == 'custom' ? '' : 'hidden' }} space-y-3">
-                                <div>
-                                    <label for="custom_location_name" class="inline-block mb-1 text-sm font-medium text-slate-500 dark:text-zink-200">Location Name (e.g. Home, Grandma's)</label>
-                                    <input type="text" id="custom_location_name" name="custom_location_name" class="form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200" placeholder="Enter a name for this location" value="{{ old('custom_location_name') }}">
-                                    @error('custom_location_name')
-                                        <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                            <!-- Step 2: Exact Location for Trip -->
+                            <div class="p-4 bg-slate-50 rounded-lg border border-slate-200 dark:bg-zink-700 dark:border-zink-500">
+                                <h6 class="mb-3 text-15 font-semibold text-slate-700 dark:text-zink-100 flex items-center gap-2">
+                                    <span class="flex items-center justify-center w-6 h-6 text-xs text-white bg-custom-500 rounded-full">2</span>
+                                    Pin Exact Home Location
+                                </h6>
+                                <p class="mb-3 text-sm text-slate-500 dark:text-zink-200">
+                                    Drag the map to pin your exact house location. The driver will use this for navigation.
+                                </p>
+                                
+                                <div class="space-y-3">
+                                    <div>
+                                        <label for="custom_location_name" class="inline-block mb-1 text-sm font-medium text-slate-500 dark:text-zink-200">Location Name (e.g. Home, Grandma's)</label>
+                                        <input type="text" id="custom_location_name" name="custom_location_name" class="form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200" placeholder="Enter a name for this location" value="{{ old('custom_location_name', $child->pickup_address ?? 'Home') }}">
+                                        @error('custom_location_name')
+                                            <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    
+                                    <div class="flex items-center gap-2">
+                                        <button type="button" onclick="useCurrentLocation()" class="px-3 py-1.5 text-sm text-white bg-blue-500 rounded hover:bg-blue-600 transition-colors flex items-center gap-1">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                                            Use My Current Location
+                                        </button>
+                                        <span id="location_status" class="text-sm text-slate-500"></span>
+                                    </div>
+
+                                    <div id="pickup_map" class="w-full h-64 rounded-lg border border-slate-200 dark:border-zink-500 z-0">
+                                        <!-- Center Pin Icon -->
+                                        <div class="map-center-pin">
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="#ef4444" stroke="#7f1d1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin drop-shadow-lg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3" fill="white"/></svg>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-slate-500">Drag the map to position the pin at your pickup location.</p>
+
+                                    <input type="hidden" id="custom_lat" name="custom_lat" value="{{ old('custom_lat', $child->pickup_lat) }}">
+                                    <input type="hidden" id="custom_lng" name="custom_lng" value="{{ old('custom_lng', $child->pickup_lng) }}">
+                                    @error('custom_lat')
+                                        <p class="mt-1 text-sm text-red-500">Please select a location on the map.</p>
                                     @enderror
                                 </div>
-                                
-                                <div class="flex items-center gap-2">
-                                    <button type="button" onclick="useCurrentLocation()" class="px-3 py-1.5 text-sm text-white bg-blue-500 rounded hover:bg-blue-600 transition-colors flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
-                                        Use My Current Location
-                                    </button>
-                                    <span id="location_status" class="text-sm text-slate-500"></span>
-                                </div>
-
-                                <div id="pickup_map" class="w-full h-64 rounded-lg border border-slate-200 dark:border-zink-500 z-0">
-                                    <!-- Center Pin Icon -->
-                                    <div class="map-center-pin">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="#ef4444" stroke="#7f1d1d" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-map-pin drop-shadow-lg"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3" fill="white"/></svg>
-                                    </div>
-                                </div>
-                                <p class="text-xs text-slate-500">Drag the map to position the pin at your pickup location.</p>
-
-                                <input type="hidden" id="custom_lat" name="custom_lat" value="{{ old('custom_lat') }}">
-                                <input type="hidden" id="custom_lng" name="custom_lng" value="{{ old('custom_lng') }}">
-                                @error('custom_lat')
-                                    <p class="mt-1 text-sm text-red-500">Please select a location on the map.</p>
-                                @enderror
                             </div>
                         </div>
 
@@ -305,30 +312,6 @@
         }
     }
 
-    function togglePickupType() {
-        const type = document.querySelector('input[name="pickup_type"]:checked').value;
-        const existingContainer = document.getElementById('existing_pickup_container');
-        const customContainer = document.getElementById('custom_pickup_container');
-        const pickupSelect = document.getElementById('pickup_location_id');
-        const customNameInput = document.getElementById('custom_location_name');
-
-        if (type === 'existing') {
-            existingContainer.classList.remove('hidden');
-            customContainer.classList.add('hidden');
-            if(pickupSelect) pickupSelect.required = true;
-            if(customNameInput) customNameInput.required = false;
-        } else {
-            existingContainer.classList.add('hidden');
-            customContainer.classList.remove('hidden');
-            if(pickupSelect) {
-                pickupSelect.value = ''; // Clear selection
-                pickupSelect.required = false;
-            }
-            if(customNameInput) customNameInput.required = true;
-            initPickupMap();
-        }
-    }
-
     function useCurrentLocation() {
         const status = document.getElementById('location_status');
         status.textContent = 'Fetching...';
@@ -343,18 +326,18 @@
             const lng = position.coords.longitude;
             status.textContent = 'Location found!';
             
+            // Ensure map is initialized
             if (!pickupMap) initPickupMap();
+            
             pickupMap.setView([lat, lng], 17);
         }, () => {
             status.textContent = 'Unable to retrieve your location';
         });
     }
 
-    // Initialize if custom is selected on load
+    // Initialize map on load
     document.addEventListener('DOMContentLoaded', function() {
-        if (document.querySelector('input[name="pickup_type"]:checked').value === 'custom') {
-            initPickupMap();
-        }
+        initPickupMap();
     });
 </script>
 @endsection

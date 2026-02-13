@@ -47,10 +47,18 @@
                                 multiple 
                                 class="form-select border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500"
                             >
-                                @foreach($locations as $location)
-                                    <option value="{{ $location->id }}" {{ $driverProfile->locations->contains($location->id) ? 'selected' : '' }}>
-                                        {{ $location->name }}
-                                    </option>
+                                @php
+                                    $locationsByCity = $locations->groupBy('city');
+                                @endphp
+
+                                @foreach($locationsByCity as $city => $cityLocations)
+                                    <optgroup label="{{ $city }}">
+                                        @foreach($cityLocations as $location)
+                                            <option value="{{ $location->id }}" {{ $driverProfile->locations->contains($location->id) ? 'selected' : '' }}>
+                                                {{ $location->name }}
+                                            </option>
+                                        @endforeach
+                                    </optgroup>
                                 @endforeach
                             </select>
                             @if($locations->isEmpty())
