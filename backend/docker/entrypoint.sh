@@ -3,9 +3,12 @@ set -e
 
 echo "🚀 Deployment started..."
 
-# 1. Run Migrations
+# 1. Run Migrations & Safety Checks
 echo "📦 Running database migrations..."
 php artisan migrate --force
+
+echo "🏥 Checking for missing tables..."
+php artisan db:ensure-tables
 
 # 2. Cache Configuration (Optional but recommended for production)
 # echo "⚙️ Caching configuration..."
