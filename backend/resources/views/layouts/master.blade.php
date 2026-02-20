@@ -455,6 +455,28 @@
 
     <!-- App js -->
     <script src="{{ asset('assets/js/app.js') }}"></script>
+
+    @if (session('status'))
+        <button
+            type="button"
+            id="global-flash-toast"
+            data-toast
+            data-toast-text="{{ session('status') }}"
+            data-toast-gravity="top"
+            data-toast-position="right"
+            data-toast-className="bg-emerald-500 text-white"
+            data-toast-duration="4000"
+            data-toast-close="true"
+            class="hidden"
+        ></button>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var el = document.getElementById('global-flash-toast');
+                if (el && typeof el.click === 'function') {
+                    el.click();
+                }
+            });
+        </script>
+    @endif
     @yield('script')
 </body>
-</html>
