@@ -41,24 +41,6 @@ function setLanguage(lang) {
 // Multi language setting
 function getLanguage() {
     language == null ? setLanguage(default_lang) : false;
-    var request = new XMLHttpRequest();
-    // Instantiating the request object
-    request.open("GET", "assets/lang/" + language + ".json");
-    // Defining event listener for readystatechange event
-    request.onreadystatechange = function () {
-        // Check if the request is compete and was successful
-        if (this.readyState === 4 && this.status === 200) {
-            var data = JSON.parse(this.responseText);
-            Object.keys(data).forEach(function (key) {
-                var elements = document.querySelectorAll("[data-key='" + key + "']");
-                Array.from(elements).forEach(function (elem) {
-                    elem.textContent = data[key];
-                });
-            });
-        }
-    };
-    // Sending the request to the server
-    request.send();
 }
 
 function updateHorizontalMenus() {

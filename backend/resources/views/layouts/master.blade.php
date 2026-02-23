@@ -124,9 +124,24 @@
                                     </div>
                                     <div data-simplebar="" class="max-h-[350px]">
                                         <div class="flex flex-col gap-1" id="notification-list">
-                                            <div class="p-4 text-center text-slate-500 dark:text-zink-300">
-                                                No new notifications
-                                            </div>
+                                            @if (session('status'))
+                                                <div class="flex items-start gap-3 p-4 hover:bg-slate-50 dark:hover:bg-zink-500/40">
+                                                    <div class="shrink-0">
+                                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
+                                                            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                                                        </span>
+                                                    </div>
+                                                    <div class="flex-1">
+                                                        <p class="text-sm font-medium text-slate-900 dark:text-zink-50">
+                                                            {{ session('status') }}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            @else
+                                                <div class="p-4 text-center text-slate-500 dark:text-zink-300">
+                                                    No new notifications
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
 
