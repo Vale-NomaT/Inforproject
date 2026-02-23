@@ -3,13 +3,23 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Services\ResendEmailService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\View\View;
 
 class PasswordResetLinkController extends Controller
 {
+    protected ResendEmailService $resendEmailService;
+
+    public function __construct(ResendEmailService $resendEmailService)
+    {
+        $this->resendEmailService = $resendEmailService;
+    }
+
     /**
      * Display the password reset link request view.
      */
@@ -29,16 +39,50 @@ class PasswordResetLinkController extends Controller
             'email' => ['required', 'email'],
         ]);
 
-        // We will send the password reset link to this user. Once we have attempted
-        // to send the link, we will examine the response then see the message we
-        // need to show to the user. Finally, we'll send out a proper response.
-        $status = Password::sendResetLink(
-            $request->only('email')
+        $user = User::where('email', $request->email)->first();
+
+        if (! $user) {
+            return back()->with('status', 'If your email is registered, we have sent you a code.');
+        }
+
+        $table = config('auth.passwords.users.table', 'password_reset_tokens');
+        $throttleSeconds = (int) config('auth.passwords.users.throttle', 60);
+
+        if ($throttleSeconds > 0) {
+            $recent = DB::table($table)
+                ->where('email', $request->email)
+                ->where('created_at', '>', now()->subSeconds($throttleSeconds))
+                ->first();
+
+            if ($recent) {
+                return back()
+                    ->withInput($request->only('email'))
+                    ->withErrors([
+                        'email' => 'Please wait a minute before requesting another code.',
+                    ]);
+            }
+        }
+
+        $otp = (string) random_int(100000, 999999);
+
+        DB::table($table)->updateOrInsert(
+            ['email' => $request->email],
+            [
+                'token' => Hash::make($otp),
+                'created_at' => now(),
+            ]
         );
 
-        return $status == Password::RESET_LINK_SENT
-                    ? back()->with('status', __($status))
-                    : back()->withInput($request->only('email'))
-                            ->withErrors(['email' => __($status)]);
+        $expireMinutes = (int) config('auth.passwords.users.expire', 60);
+
+        $subject = 'Your SafeRide Kids password reset code';
+        $html = '<p>Your password reset code is <strong>'.e($otp).'</strong>.</p>';
+        $html .= '<p>This code will expire in '.$expireMinutes.' minutes.</p>';
+
+        $this->resendEmailService->send($request->email, $subject, $html);
+
+        return redirect()
+            ->route('password.reset.otp', ['email' => $request->email])
+            ->with('status', 'We have emailed you a password reset code.');
     }
 }

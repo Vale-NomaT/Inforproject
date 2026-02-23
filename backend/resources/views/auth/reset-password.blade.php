@@ -4,13 +4,20 @@
     <form method="POST" action="{{ route('password.store') }}">
         @csrf
 
-        <!-- Password Reset Token -->
-        <input type="hidden" name="token" value="{{ $request->route('token') }}">
+        @if ($request->route('token'))
+            <input type="hidden" name="token" value="{{ $request->route('token') }}">
+        @else
+            <div>
+                <x-input-label for="token" :value="__('OTP Code')" />
+                <x-text-input id="token" class="block mt-1 w-full" type="text" name="token" :value="old('token')" required autofocus />
+                <x-input-error :messages="$errors->get('token')" class="mt-2" />
+            </div>
+        @endif
 
         <!-- Email Address -->
         <div>
             <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email', $request->email)" required autofocus autocomplete="username" />
+            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email', $request->email)" required autocomplete="username" />
             <x-input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 
