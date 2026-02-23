@@ -312,37 +312,40 @@
         }
     @endif
 
+    function sendTripEvent(tripId, type, latitude, longitude) {
+        fetch(`/driver/trips/${tripId}/events`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                type: type,
+                lat: latitude,
+                lng: longitude
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                window.location.reload();
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+
     function logEvent(tripId, type) {
         if (!navigator.geolocation) {
-            alert('Geolocation is not supported by your browser');
+            sendTripEvent(tripId, type, null, null);
             return;
         }
 
         navigator.geolocation.getCurrentPosition(position => {
             const { latitude, longitude } = position.coords;
-
-            fetch(`/driver/trips/${tripId}/events`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                },
-                body: JSON.stringify({
-                    type: type,
-                    lat: latitude,
-                    lng: longitude
-                })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'ok') {
-                    window.location.reload();
-                }
-            })
-            .catch(error => console.error('Error:', error));
+            sendTripEvent(tripId, type, latitude, longitude);
         }, error => {
-            alert('Unable to retrieve your location');
             console.error(error);
+            sendTripEvent(tripId, type, null, null);
         });
     }
 
