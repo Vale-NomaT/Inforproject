@@ -40,7 +40,7 @@ class RegisteredUserController extends Controller
                 'name' => $data['name'] . ' ' . $data['surname'],
                 'email' => $data['email'],
                 'password' => Hash::make($data['password']),
-                'role' => 'parent',
+                'user_type' => 'parent',
                 'status' => 'active',
             ]);
 
