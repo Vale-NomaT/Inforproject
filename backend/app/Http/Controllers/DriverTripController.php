@@ -7,7 +7,7 @@ use App\Events\TripLocationUpdated;
 use App\Models\Trip;
 use App\Models\TripEvent;
 use App\Models\User;
-use App\Services\ResendEmailService;
+use App\Notifications\TripUpdateNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,13 +16,6 @@ use Illuminate\View\View;
 
 class DriverTripController extends Controller
 {
-    protected ResendEmailService $resendEmailService;
-
-    public function __construct(ResendEmailService $resendEmailService)
-    {
-        $this->resendEmailService = $resendEmailService;
-    }
-
     public function index(Request $request): View
     {
         $trips = Trip::with(['child.school', 'child.pickupLocation'])
@@ -169,9 +162,6 @@ class DriverTripController extends Controller
             return;
         }
 
-        $subject = 'Trip update for '.$child->first_name.' '.$child->last_name;
-        $html = '<p>'.e($message).'</p>';
-
-        $this->resendEmailService->send($parentUser->email, $subject, $html);
+        $parentUser->notify(new TripUpdateNotification($message, $trip->id, $child->first_name . ' ' . $child->last_name));
     }
 }

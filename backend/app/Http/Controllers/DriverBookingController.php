@@ -6,7 +6,7 @@ use App\Events\BookingStatusUpdated;
 use App\Models\BookingRequest;
 use App\Models\DriverProfile;
 use App\Models\Trip;
-use App\Services\ResendEmailService;
+use App\Notifications\BookingStatusNotification;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
@@ -14,13 +14,6 @@ use Illuminate\View\View;
 
 class DriverBookingController extends Controller
 {
-    protected ResendEmailService $resendEmailService;
-
-    public function __construct(ResendEmailService $resendEmailService)
-    {
-        $this->resendEmailService = $resendEmailService;
-    }
-
     public function index(Request $request): View
     {
         $bookings = BookingRequest::where('driver_id', $request->user()->id)
@@ -97,10 +90,11 @@ class DriverBookingController extends Controller
         $parent = $booking->parent;
 
         if ($parent) {
-            $subject = 'Your booking request has been approved';
-            $html = '<p>Your booking request for your child has been approved by the driver.</p>';
-
-            $this->resendEmailService->send($parent->email, $subject, $html);
+            $parent->notify(new BookingStatusNotification(
+                'approved',
+                $request->user()->name,
+                $booking->id
+            ));
         }
 
         return back()->with('status', 'Booking approved.');
@@ -125,10 +119,11 @@ class DriverBookingController extends Controller
         $parent = $booking->parent;
 
         if ($parent) {
-            $subject = 'Your booking request has been declined';
-            $html = '<p>Your booking request for your child has been declined by the driver.</p>';
-
-            $this->resendEmailService->send($parent->email, $subject, $html);
+            $parent->notify(new BookingStatusNotification(
+                'declined',
+                $request->user()->name,
+                $booking->id
+            ));
         }
 
         return back()->with('status', 'Booking declined.');

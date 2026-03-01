@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\BookingRequest;
 use App\Models\Child;
 use App\Models\User;
+use App\Notifications\NewBookingNotification;
 use App\Services\EligibleDriverService;
-use App\Services\ResendEmailService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -15,14 +15,10 @@ class ParentDriverController extends Controller
 {
     protected EligibleDriverService $eligibleDriverService;
 
-    protected ResendEmailService $resendEmailService;
-
     public function __construct(
-        EligibleDriverService $eligibleDriverService,
-        ResendEmailService $resendEmailService
+        EligibleDriverService $eligibleDriverService
     ) {
         $this->eligibleDriverService = $eligibleDriverService;
-        $this->resendEmailService = $resendEmailService;
     }
 
     public function show(Request $request, Child $child): View
@@ -84,11 +80,11 @@ class ParentDriverController extends Controller
             ->first();
 
         if ($driverUser) {
-            $subject = 'New booking request for '.$child->first_name.' '.$child->last_name;
-            $html = '<p>You have a new booking request from a parent for '.e($child->first_name.' '.$child->last_name).'.</p>';
-            $html .= '<p>Please sign in to SafeRide Kids to approve or decline this request.</p>';
-
-            $this->resendEmailService->send($driverUser->email, $subject, $html);
+            $driverUser->notify(new NewBookingNotification(
+                $request->user()->name,
+                $child->first_name . ' ' . $child->last_name,
+                $booking->id
+            ));
         }
 
         return back()->with('status', 'Request sent! Awaiting driver confirmation.');

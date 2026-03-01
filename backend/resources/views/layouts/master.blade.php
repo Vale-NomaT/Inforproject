@@ -113,10 +113,14 @@
                             <div class="relative flex items-center dropdown h-header">
                                 <button type="button" class="inline-flex justify-center relative items-center p-0 text-topbar-item transition-all w-[37.5px] h-[37.5px] duration-200 ease-linear bg-topbar rounded-md dropdown-toggle btn hover:bg-topbar-item-bg-hover hover:text-topbar-item-hover group-data-[topbar=dark]:bg-topbar-dark group-data-[topbar=dark]:hover:bg-topbar-item-bg-hover-dark group-data-[topbar=dark]:hover:text-topbar-item-hover-dark group-data-[topbar=brand]:bg-topbar-brand group-data-[topbar=brand]:hover:bg-topbar-item-bg-hover-brand group-data-[topbar=brand]:hover:text-topbar-item-hover-brand group-data-[topbar=dark]:dark:bg-zink-700 group-data-[topbar=dark]:dark:hover:bg-zink-600 group-data-[topbar=brand]:text-topbar-item-brand group-data-[topbar=dark]:dark:hover:text-zink-50 group-data-[topbar=dark]:dark:text-zink-200 group-data-[topbar=dark]:text-topbar-item-dark" id="notificationDropdown" data-bs-toggle="dropdown">
                                     <i data-lucide="bell-ring" class="inline-block w-5 h-5 stroke-1 fill-slate-100 group-data-[topbar=dark]:fill-topbar-item-bg-hover-dark group-data-[topbar=brand]:fill-topbar-item-bg-hover-brand"></i>
-                                    <span class="absolute top-0 right-0 flex w-1.5 h-1.5">
-                                        <span class="absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping bg-sky-400"></span>
-                                        <span class="relative inline-flex w-1.5 h-1.5 rounded-full bg-sky-500"></span>
-                                    </span>
+                                    @auth
+                                        @if(auth()->user()->unreadNotifications->count() > 0)
+                                            <span class="absolute top-0 right-0 flex w-1.5 h-1.5">
+                                                <span class="absolute inline-flex w-full h-full rounded-full opacity-75 animate-ping bg-sky-400"></span>
+                                                <span class="relative inline-flex w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+                                            </span>
+                                        @endif
+                                    @endauth
                                 </button>
                                 <div class="absolute z-50 hidden ltr:text-left rtl:text-right bg-white rounded-md shadow-md !top-4 dropdown-menu min-w-[20rem] lg:min-w-[26rem] dark:bg-zink-600" aria-labelledby="notificationDropdown">
                                     <div class="p-4">
@@ -137,11 +141,36 @@
                                                         </p>
                                                     </div>
                                                 </div>
-                                            @else
-                                                <div class="p-4 text-center text-slate-500 dark:text-zink-300">
-                                                    No new notifications
-                                                </div>
                                             @endif
+
+                                            @auth
+                                                @forelse(auth()->user()->unreadNotifications as $notification)
+                                                    <a href="{{ $notification->data['url'] ?? '#' }}" class="flex items-start gap-3 p-4 hover:bg-slate-50 dark:hover:bg-zink-500/40">
+                                                        <div class="shrink-0">
+                                                            <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-600 dark:bg-zink-600 dark:text-zink-200">
+                                                                <i data-lucide="{{ $notification->data['icon'] ?? 'bell' }}" class="w-4 h-4 {{ $notification->data['color'] ?? '' }}"></i>
+                                                            </span>
+                                                        </div>
+                                                        <div class="flex-1">
+                                                            <h6 class="mb-1 text-sm font-medium text-slate-900 dark:text-zink-50">
+                                                                {{ $notification->data['title'] ?? 'Notification' }}
+                                                            </h6>
+                                                            <p class="mb-1 text-xs text-slate-500 dark:text-zink-300">
+                                                                {{ $notification->data['message'] ?? '' }}
+                                                            </p>
+                                                            <small class="text-xs text-slate-400 dark:text-zink-300">
+                                                                {{ $notification->created_at->diffForHumans() }}
+                                                            </small>
+                                                        </div>
+                                                    </a>
+                                                @empty
+                                                    @if (!session('status'))
+                                                        <div class="p-4 text-center text-slate-500 dark:text-zink-300">
+                                                            No new notifications
+                                                        </div>
+                                                    @endif
+                                                @endforelse
+                                            @endauth
                                         </div>
                                     </div>
 

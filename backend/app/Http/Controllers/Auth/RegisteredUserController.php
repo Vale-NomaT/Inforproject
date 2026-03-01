@@ -3,20 +3,17 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\DriverProfile;
 use App\Models\ParentProfile;
 use App\Models\User;
+use App\Notifications\WelcomeNotification;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules\Password;
+use Illuminate\Validation\Rules;
 use Illuminate\View\View;
-
-use App\Mail\WelcomeEmail;
-use Illuminate\Support\Facades\Mail;
 
 class RegisteredUserController extends Controller
 {
@@ -54,13 +51,9 @@ class RegisteredUserController extends Controller
         });
 
         event(new Registered($user));
-        
-        // Send Welcome Email
-        try {
-            Mail::to($user)->send(new WelcomeEmail($user));
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to send welcome email to parent: ' . $e->getMessage());
-        }
+
+        // Send Welcome Notification
+        $user->notify(new WelcomeNotification($user));
 
         Auth::login($user);
 
@@ -110,12 +103,8 @@ class RegisteredUserController extends Controller
 
         event(new Registered($user));
 
-        // Send Welcome Email
-        try {
-            Mail::to($user)->send(new WelcomeEmail($user));
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Failed to send welcome email to driver: ' . $e->getMessage());
-        }
+        // Send Welcome Notification
+        $user->notify(new WelcomeNotification($user));
 
         Auth::login($user);
 
