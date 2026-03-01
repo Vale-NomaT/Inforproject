@@ -57,10 +57,15 @@ function addNewRow() {
 const table = new DataTable('#example');
 let counter = 1;
 
-document.querySelector('#addRow').addEventListener('click', addNewRow);
+const addRowBtn = document.querySelector('#addRow');
+if (addRowBtn) {
+    addRowBtn.addEventListener('click', addNewRow);
+}
 
 // Automatically add a first row of data
-addNewRow();
+if (document.querySelector('#example')) {
+    addNewRow();
+}
 
 //Show / hide columns dynamically
 
@@ -96,38 +101,43 @@ rowSelectionDeletion.on('click', 'tbody tr', (e) => {
     }
 });
 
-document.querySelector('#deleteButton').addEventListener('click', function () {
-    rowSelectionDeletion.row('.selected').remove().draw(false);
-});
+const deleteButton = document.querySelector('#deleteButton');
+if (deleteButton) {
+    deleteButton.addEventListener('click', function () {
+        rowSelectionDeletion.row('.selected').remove().draw(false);
+    });
+}
 
 //Custom filtering - range search
 const minEl = document.querySelector('#min');
 const maxEl = document.querySelector('#max');
 
-// Custom range filtering function
-DataTable.ext.search.push(function (settings, data, dataIndex) {
-    let min = parseInt(minEl.value, 10);
-    let max = parseInt(maxEl.value, 10);
-    let age = parseFloat(data[3]) || 0; // use data for the age column
+if (minEl && maxEl) {
+    // Custom range filtering function
+    DataTable.ext.search.push(function (settings, data, dataIndex) {
+        let min = parseInt(minEl.value, 10);
+        let max = parseInt(maxEl.value, 10);
+        let age = parseFloat(data[3]) || 0; // use data for the age column
 
-    if (
-        (isNaN(min) && isNaN(max)) ||
-        (isNaN(min) && age <= max) ||
-        (min <= age && isNaN(max)) ||
-        (min <= age && age <= max)
-    ) {
-        return true;
-    }
+        if (
+            (isNaN(min) && isNaN(max)) ||
+            (isNaN(min) && age <= max) ||
+            (min <= age && isNaN(max)) ||
+            (min <= age && age <= max)
+        ) {
+            return true;
+        }
 
-    return false;
-});
+        return false;
+    });
 
-const customFiltering = new DataTable('#customFiltering');
+    const customFiltering = new DataTable('#customFiltering');
 
-// Changes to the inputs will trigger a redraw to update the table
-minEl.addEventListener('input', function () {
-    customFiltering.draw();
-});
-maxEl.addEventListener('input', function () {
-    customFiltering.draw();
-});
+    // Changes to the inputs will trigger a redraw to update the table
+    minEl.addEventListener('input', function () {
+        customFiltering.draw();
+    });
+    maxEl.addEventListener('input', function () {
+        customFiltering.draw();
+    });
+}

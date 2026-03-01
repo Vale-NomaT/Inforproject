@@ -312,6 +312,8 @@
         }
     @endif
 
+    let geoPermissionDenied = false;
+
     function sendTripEvent(tripId, type, latitude, longitude) {
         fetch(`/driver/trips/${tripId}/events`, {
             method: 'POST',
@@ -335,7 +337,7 @@
     }
 
     function logEvent(tripId, type) {
-        if (!navigator.geolocation) {
+        if (!navigator.geolocation || geoPermissionDenied) {
             sendTripEvent(tripId, type, null, null);
             return;
         }
@@ -345,8 +347,22 @@
             sendTripEvent(tripId, type, latitude, longitude);
         }, error => {
             console.error(error);
+            if (error.code === 1) { // Permission denied
+                geoPermissionDenied = true;
+                showLocationError();
+            }
             sendTripEvent(tripId, type, null, null);
         });
+    }
+
+    function showLocationError() {
+        const statusEl = document.getElementById('location-status');
+        if (statusEl) {
+            statusEl.classList.remove('hidden');
+            statusEl.innerHTML = '<span class="text-red-500"><i data-lucide="alert-circle" class="inline w-4 h-4 mr-1"></i> Location permission denied. Please enable it to track trips.</span>';
+            // Re-initialize icons if needed, but might not be available here. 
+            // Just text is fine.
+        }
     }
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -357,6 +373,8 @@
             if (statusEl) statusEl.classList.remove('hidden');
 
             setInterval(() => {
+                if (geoPermissionDenied) return;
+
                 activeTrips.forEach(card => {
                     const tripId = card.dataset.tripId;
                     
@@ -375,6 +393,12 @@
                                     lng: longitude
                                 })
                             }).catch(console.error);
+                        }, error => {
+                             if (error.code === 1) {
+                                 geoPermissionDenied = true;
+                                 showLocationError();
+                             }
+                             console.error(error);
                         });
                     }
                 });
