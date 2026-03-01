@@ -145,18 +145,30 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 <script>
-    @if (!$trips->isEmpty())
-        const map = L.map('driver-route-map').setView([0, 0], 2);
+    let geoPermissionDenied = false;
+    let driverMarker = null;
+    let routingControl = null;
+    let map = null;
+
+    // Prepare trip data from PHP
+    const trips = @json($trips);
+    const csrfToken = '{{ csrf_token() }}';
+    const updateLocationUrl = '{{ route("driver.location.update") }}';
+
+    function initMap() {
+        if (trips.length === 0) return;
+
+        const mapContainer = document.getElementById('driver-route-map');
+        if (!mapContainer) return;
+
+        map = L.map('driver-route-map').setView([-20.1367, 28.6363], 13); // Default to Bulawayo
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        const bounds = L.latLngBounds();
-        const pickupPoints = [];
-        const schoolPoints = [];
-
+        // Icons
         const pickupIcon = L.divIcon({
             className: 'custom-div-icon',
             html: "<div style='background-color: #22c55e; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.3);'></div>",
@@ -171,155 +183,212 @@
             iconAnchor: [6, 6]
         });
 
-        @foreach ($trips as $trip)
-            @php
-                $child = $trip->child;
-                $homeLat = $child->pickup_lat ?? ($child->pickupLocation ? $child->pickupLocation->lat : null);
-                $homeLng = $child->pickup_lng ?? ($child->pickupLocation ? $child->pickupLocation->lng : null);
-                $homeName = $child->pickup_address ?? ($child->pickupLocation ? $child->pickupLocation->name : 'Home');
+        const waypoints = [];
+        const bounds = L.latLngBounds();
+
+        // Process trips to build waypoints
+        // Logic: Pickups first, then Dropoffs (for Morning). 
+        
+        const pickups = [];
+        const dropoffs = [];
+
+        trips.forEach(trip => {
+            const child = trip.child;
+            if (!child) return;
+
+            const isMorning = trip.type === 'morning';
+            
+            let pickupLat, pickupLng, pickupName, dropoffLat, dropoffLng, dropoffName;
+
+            if (isMorning) {
+                // Morning: Home -> School
+                pickupLat = child.pickup_lat || (child.pickup_location ? child.pickup_location.lat : null);
+                pickupLng = child.pickup_lng || (child.pickup_location ? child.pickup_location.lng : null);
+                pickupName = child.pickup_address || (child.pickup_location ? child.pickup_location.name : 'Home');
                 
-                $schoolLat = $child->school->lat ?? null;
-                $schoolLng = $child->school->lng ?? null;
-                $schoolName = $child->school->name ?? null;
+                dropoffLat = child.school ? child.school.lat : null;
+                dropoffLng = child.school ? child.school.lng : null;
+                dropoffName = child.school ? child.school.name : 'School';
+            } else {
+                // Afternoon: School -> Home
+                pickupLat = child.school ? child.school.lat : null;
+                pickupLng = child.school ? child.school.lng : null;
+                pickupName = child.school ? child.school.name : 'School';
 
-                $isMorning = $trip->type === 'morning';
+                dropoffLat = child.pickup_lat || (child.pickup_location ? child.pickup_location.lat : null);
+                dropoffLng = child.pickup_lng || (child.pickup_location ? child.pickup_location.lng : null);
+                dropoffName = child.pickup_address || (child.pickup_location ? child.pickup_location.name : 'Home');
+            }
 
-                if ($isMorning) {
-                    $startLat = $homeLat;
-                    $startLng = $homeLng;
-                    $startName = $homeName;
-                    $startDesc = "Pickup: " . ($child->first_name ?? 'Child');
-                    
-                    $endLat = $schoolLat;
-                    $endLng = $schoolLng;
-                    $endName = $schoolName;
-                    $endDesc = "Drop-off: " . ($child->school->name ?? 'School');
-                } else {
-                    $startLat = $schoolLat;
-                    $startLng = $schoolLng;
-                    $startName = $schoolName;
-                    $startDesc = "Pickup: " . ($child->first_name ?? 'Child') . " (School)";
+            // Add Markers
+            if (pickupLat && pickupLng) {
+                L.marker([pickupLat, pickupLng], {icon: pickupIcon})
+                    .bindPopup(`<b>Pickup: ${child.first_name}</b><br>${pickupName}`)
+                    .addTo(map);
+                bounds.extend([pickupLat, pickupLng]);
+                
+                // Store with metadata
+                // We allow duplicates in list if we want to show multiple stops at same location (e.g. siblings), 
+                // but for routing efficiency OSRM might merge them.
+                // For now, we add all.
+                pickups.push({
+                    latLng: L.latLng(pickupLat, pickupLng),
+                    tripId: trip.id,
+                    type: 'pickup',
+                    name: pickupName,
+                    childName: child.first_name
+                });
+            }
 
-                    $endLat = $homeLat;
-                    $endLng = $homeLng;
-                    $endName = $homeName;
-                    $endDesc = "Drop-off: " . ($child->first_name ?? 'Child') . " (Home)";
-                }
-            @endphp
+            if (dropoffLat && dropoffLng) {
+                L.marker([dropoffLat, dropoffLng], {icon: dropoffIcon})
+                    .bindPopup(`<b>Dropoff: ${child.first_name}</b><br>${dropoffName}`)
+                    .addTo(map);
+                bounds.extend([dropoffLat, dropoffLng]);
 
-            @if ($startLat && $startLng)
-                {
-                    const lat = {{ $startLat }};
-                    const lng = {{ $startLng }};
-                    const marker = L.marker([lat, lng], {icon: pickupIcon}).addTo(map);
-                    marker.bindPopup(`
-                        <strong>{{ $startDesc }}</strong><br>
-                        {{ $startName }}<br>
-                        <a href='https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}' target='_blank'>Get Directions</a>
-                    `);
-                    bounds.extend([lat, lng]);
-                    
-                    const exists = pickupPoints.some(p => p.lat === lat && p.lng === lng);
-                    if (!exists) {
-                        pickupPoints.push(L.latLng(lat, lng));
-                    }
-                }
-            @endif
-
-            @if ($endLat && $endLng)
-                {
-                    const lat = {{ $endLat }};
-                    const lng = {{ $endLng }};
-                    const marker = L.marker([lat, lng], {icon: dropoffIcon}).addTo(map);
-                    marker.bindPopup(`
-                        <strong>{{ $endDesc }}</strong><br>
-                        {{ $endName }}
-                    `);
-                    bounds.extend([lat, lng]);
-                    
-                    const exists = schoolPoints.some(p => p.lat === lat && p.lng === lng);
-                    if (!exists) {
-                        schoolPoints.push(L.latLng(lat, lng));
-                    }
-                }
-            @endif
-        @endforeach
+                dropoffs.push({
+                    latLng: L.latLng(dropoffLat, dropoffLng),
+                    tripId: trip.id,
+                    type: 'dropoff',
+                    name: dropoffName,
+                    childName: child.first_name
+                });
+            }
+        });
 
         if (bounds.isValid()) {
             map.fitBounds(bounds, {padding: [50, 50]});
-        } else {
-            map.setView([-26.2041, 28.0473], 12);
         }
 
-        let routingControl = null;
+        // Initialize Routing with placeholders
+        window.routePoints = { pickups, dropoffs };
+    }
 
-        function initRouting(startPoint) {
-            const waypoints = [];
+    function updateRouting(driverLatLng) {
+        if (!map) return;
+        
+        const points = [];
+        if (driverLatLng) points.push(driverLatLng);
+        
+        // Add Pickups then Dropoffs
+        // We need to keep track of which point corresponds to which trip to update UI
+        const orderedStops = [];
+
+        window.routePoints.pickups.forEach(p => {
+            points.push(p.latLng);
+            orderedStops.push(p);
+        });
+        window.routePoints.dropoffs.forEach(p => {
+            points.push(p.latLng);
+            orderedStops.push(p);
+        });
+
+        if (points.length < 2) return;
+
+        if (routingControl) {
+            map.removeControl(routingControl);
+        }
+
+        routingControl = L.Routing.control({
+            waypoints: points,
+            router: L.Routing.osrmv1({
+                serviceUrl: 'https://router.project-osrm.org/route/v1',
+                routingOptions: {
+                    alternatives: true
+                }
+            }),
+            lineOptions: {
+                styles: [{color: '#6366f1', opacity: 0.8, weight: 6}]
+            },
+            showAlternatives: true,
+            show: false, // Hide default itinerary text
+            addWaypoints: false,
+            draggableWaypoints: false,
+            fitSelectedRoutes: false,
+            createMarker: function() { return null; } 
+        })
+        .on('routesfound', function(e) {
+            const routes = e.routes;
+            if (!routes || routes.length === 0) return;
+
+            const route = routes[0];
+            const legs = route.legs; // Leg 0 is Driver -> 1st Stop
+
+            // Update UI with ETA
+            // orderedStops[i] corresponds to legs[i] (arrival at stop i)
+            // Note: points has Driver + Stops. So points[0] is Driver. points[1] is Stop 1.
+            // legs[0] is path from points[0] to points[1].
             
-            if (startPoint) {
-                waypoints.push(startPoint);
-            }
+            let cumulativeTime = 0;
+            let cumulativeDistance = 0;
 
-            pickupPoints.forEach(p => waypoints.push(p));
-            schoolPoints.forEach(p => waypoints.push(p));
+            // Clear previous ETAs
+            document.querySelectorAll('.eta-display').forEach(el => el.innerHTML = '');
 
-            if (waypoints.length < 2) return;
+            legs.forEach((leg, index) => {
+                if (index >= orderedStops.length) return;
 
-            if (routingControl) {
-                map.removeControl(routingControl);
-            }
+                const stop = orderedStops[index];
+                cumulativeTime += leg.summary.totalTime; // seconds
+                cumulativeDistance += leg.summary.totalDistance; // meters
 
-            routingControl = L.Routing.control({
-                waypoints: waypoints,
-                router: L.Routing.osrmv1({
-                    serviceUrl: 'https://router.project-osrm.org/route/v1'
-                }),
-                lineOptions: {
-                    styles: [{color: '#6366f1', opacity: 0.8, weight: 6}]
-                },
-                show: false,
-                addWaypoints: false,
-                draggableWaypoints: false,
-                fitSelectedRoutes: false
-            }).addTo(map);
-        }
+                // Update Trip Card
+                const tripCard = document.querySelector(`.card[data-trip-id="${stop.tripId}"]`);
+                if (tripCard) {
+                    // Create or find ETA container
+                    let etaContainer = tripCard.querySelector('.eta-info');
+                    if (!etaContainer) {
+                        const div = document.createElement('div');
+                        div.className = 'eta-info mt-2 pt-2 border-t border-slate-100 dark:border-zink-600 flex justify-between items-center text-sm';
+                        tripCard.querySelector('.card-body').appendChild(div);
+                        etaContainer = div;
+                    }
 
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(position => {
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-                
-                const driverIcon = L.divIcon({
-                    className: 'custom-div-icon',
-                    html: "<div style='background-color: #f59e0b; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.4);'></div>",
-                    iconSize: [16, 16],
-                    iconAnchor: [8, 8]
-                });
+                    const timeString = Math.round(cumulativeTime / 60) + ' min';
+                    const distString = (cumulativeDistance / 1000).toFixed(1) + ' km';
 
-                L.marker([lat, lng], {icon: driverIcon}).addTo(map)
-                    .bindPopup("You are here").openPopup();
-                
-                bounds.extend([lat, lng]);
-                map.fitBounds(bounds, {padding: [50, 50]});
-
-                initRouting(L.latLng(lat, lng));
-            }, (error) => {
-                console.error("Geolocation error:", error);
-                initRouting(null);
+                    // Determine label based on stop type
+                    const label = stop.type === 'pickup' ? 'Pickup in' : 'Dropoff in';
+                    
+                    // We might have multiple stops for same trip (Pickup AND Dropoff in list)
+                    // We should append or update specific fields. 
+                    // Let's use specific classes for pickup-eta and dropoff-eta if needed, 
+                    // but usually we care about the NEXT action.
+                    
+                    // If this is the FIRST time we see this trip in the loop, it's the Pickup (usually).
+                    // Actually, we processed Pickups then Dropoffs. 
+                    // So we will encounter the Pickup leg first, then the Dropoff leg later.
+                    
+                    // Let's create specific slots
+                    let specificSlot = etaContainer.querySelector(`.eta-${stop.type}`);
+                    if (!specificSlot) {
+                        specificSlot = document.createElement('span');
+                        specificSlot.className = `eta-${stop.type} px-2 py-1 rounded bg-slate-100 dark:bg-zink-600 text-slate-600 dark:text-zink-200`;
+                        etaContainer.appendChild(specificSlot);
+                    }
+                    
+                    specificSlot.innerHTML = `<b>${label}:</b> ${timeString} (${distString})`;
+                }
             });
-        } else {
-            initRouting(null);
-        }
-    @endif
+        })
+        .addTo(map);
+    }
 
-    let geoPermissionDenied = false;
+    function showLocationError() {
+        const statusEl = document.getElementById('location-status');
+        if (statusEl) {
+            statusEl.classList.remove('hidden');
+            statusEl.innerHTML = '<span class="text-red-500"><i data-lucide="alert-circle" class="inline w-4 h-4 mr-1"></i> Location permission denied. Please enable location services on your device to track trips.</span>';
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
 
     function sendTripEvent(tripId, type, latitude, longitude) {
         fetch(`/driver/trips/${tripId}/events`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                'X-CSRF-TOKEN': csrfToken
             },
             body: JSON.stringify({
                 type: type,
@@ -336,8 +405,15 @@
         .catch(error => console.error('Error:', error));
     }
 
-    function logEvent(tripId, type) {
-        if (!navigator.geolocation || geoPermissionDenied) {
+    // Exposed to onclick handlers
+    window.logEvent = function(tripId, type) {
+        if (geoPermissionDenied) {
+            // If denied, just send without location
+            sendTripEvent(tripId, type, null, null);
+            return;
+        }
+
+        if (!navigator.geolocation) {
             sendTripEvent(tripId, type, null, null);
             return;
         }
@@ -346,64 +422,102 @@
             const { latitude, longitude } = position.coords;
             sendTripEvent(tripId, type, latitude, longitude);
         }, error => {
-            console.error(error);
-            if (error.code === 1) { // Permission denied
+            console.warn("Location error during event log:", error);
+            if (error.code === 1) {
                 geoPermissionDenied = true;
                 showLocationError();
             }
+            // Proceed without location
             sendTripEvent(tripId, type, null, null);
         });
-    }
-
-    function showLocationError() {
-        const statusEl = document.getElementById('location-status');
-        if (statusEl) {
-            statusEl.classList.remove('hidden');
-            statusEl.innerHTML = '<span class="text-red-500"><i data-lucide="alert-circle" class="inline w-4 h-4 mr-1"></i> Location permission denied. Please enable it to track trips.</span>';
-            // Re-initialize icons if needed, but might not be available here. 
-            // Just text is fine.
-        }
-    }
+    };
 
     document.addEventListener('DOMContentLoaded', () => {
-        const activeTrips = document.querySelectorAll('[data-status="in_progress"]');
-        
-        if (activeTrips.length > 0) {
-            const statusEl = document.getElementById('location-status');
-            if (statusEl) statusEl.classList.remove('hidden');
+        initMap();
 
+        // Start Location Tracking
+        if (navigator.geolocation) {
+            // Initial check
+            navigator.geolocation.getCurrentPosition(position => {
+                const { latitude, longitude } = position.coords;
+                
+                // Update Driver Marker
+                const driverLatLng = L.latLng(latitude, longitude);
+                
+                if (map) {
+                    const driverIcon = L.divIcon({
+                        className: 'custom-div-icon',
+                        html: "<div style='background-color: #f59e0b; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.4);'></div>",
+                        iconSize: [16, 16],
+                        iconAnchor: [8, 8]
+                    });
+                    
+                    if (driverMarker) map.removeLayer(driverMarker);
+                    driverMarker = L.marker(driverLatLng, {icon: driverIcon}).addTo(map).bindPopup("You");
+                    
+                    // Update Route
+                    updateRouting(driverLatLng);
+                }
+
+                // Send to Backend
+                updateBackendLocation(latitude, longitude);
+
+            }, error => {
+                console.error("Initial geolocation error:", error);
+                if (error.code === 1) {
+                    geoPermissionDenied = true;
+                    showLocationError();
+                    // Initialize route without driver location
+                    updateRouting(null); 
+                }
+            });
+
+            // Interval Update
             setInterval(() => {
                 if (geoPermissionDenied) return;
 
-                activeTrips.forEach(card => {
-                    const tripId = card.dataset.tripId;
+                navigator.geolocation.getCurrentPosition(position => {
+                    const { latitude, longitude } = position.coords;
                     
-                    if (navigator.geolocation) {
-                        navigator.geolocation.getCurrentPosition(position => {
-                            const { latitude, longitude } = position.coords;
-                            
-                            fetch(`/driver/trips/${tripId}/location`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                },
-                                body: JSON.stringify({
-                                    lat: latitude,
-                                    lng: longitude
-                                })
-                            }).catch(console.error);
-                        }, error => {
-                             if (error.code === 1) {
-                                 geoPermissionDenied = true;
-                                 showLocationError();
-                             }
-                             console.error(error);
+                    // Update UI Marker
+                    if (map && driverMarker) {
+                        driverMarker.setLatLng([latitude, longitude]);
+                    } else if (map) {
+                        // Create if missing
+                        const driverIcon = L.divIcon({
+                            className: 'custom-div-icon',
+                            html: "<div style='background-color: #f59e0b; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.4);'></div>",
+                            iconSize: [16, 16],
+                            iconAnchor: [8, 8]
                         });
+                        driverMarker = L.marker([latitude, longitude], {icon: driverIcon}).addTo(map).bindPopup("You");
+                    }
+
+                    // Send to Backend
+                    updateBackendLocation(latitude, longitude);
+
+                }, error => {
+                    if (error.code === 1) {
+                        geoPermissionDenied = true;
+                        showLocationError();
                     }
                 });
-            }, 15000);
+            }, 15000); // 15 seconds
+        } else {
+            showLocationError();
+            updateRouting(null);
         }
     });
+
+    function updateBackendLocation(lat, lng) {
+        fetch(updateLocationUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ lat, lng })
+        }).catch(err => console.error("Failed to update backend location", err));
+    }
 </script>
 @endsection

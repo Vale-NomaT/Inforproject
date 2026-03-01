@@ -59,7 +59,8 @@ class DriverTripController extends Controller
             abort(403);
         }
 
-        // Check if driver already has an active trip
+        // Removed check for active trip to allow multiple concurrent trips (multi-pickup support)
+        /*
         $activeTrip = Trip::where('driver_id', $request->user()->id)
             ->where('status', Trip::STATUS_IN_PROGRESS)
             ->exists();
@@ -67,6 +68,7 @@ class DriverTripController extends Controller
         if ($activeTrip) {
             return back()->with('error', 'You already have a trip in progress. Please complete it before starting a new one.');
         }
+        */
 
         if ($trip->status !== Trip::STATUS_SCHEDULED) {
             return back();
@@ -86,6 +88,31 @@ class DriverTripController extends Controller
         $this->notifyParent($trip, 'Driver has started the trip.');
 
         return back()->with('status', 'Trip started. Tracking is now active.');
+    }
+
+    /**
+     * Update location for ALL in-progress trips for this driver.
+     * This allows the driver to broadcast their location to all relevant parents simultaneously.
+     */
+    public function updateDriverLocation(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'lat' => ['required', 'numeric'],
+            'lng' => ['required', 'numeric'],
+        ]);
+
+        $activeTrips = Trip::where('driver_id', $request->user()->id)
+            ->where('status', Trip::STATUS_IN_PROGRESS)
+            ->get();
+
+        foreach ($activeTrips as $trip) {
+            Event::dispatch(new TripLocationUpdated($trip, (float) $data['lat'], (float) $data['lng']));
+        }
+
+        return response()->json([
+            'status' => 'ok',
+            'updated_count' => $activeTrips->count()
+        ]);
     }
 
     public function updateLocation(Request $request, Trip $trip): JsonResponse

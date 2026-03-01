@@ -57,6 +57,8 @@
                         </div>
                     @endif
 
+                    <div id="eta-display" class="mb-4"></div>
+
                     <div id="map" class="h-80 sm:h-96 rounded-xl w-full z-0"></div>
                 </div>
             </div>
@@ -116,7 +118,9 @@
 
 @section('script')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 <script>
     const map = L.map('map');
 
@@ -129,6 +133,8 @@
 
     let marker = null;
     let pathLine = null;
+    let routingControl = null;
+    let currentTarget = null; // {lat, lng, type}
 
     @php
         $startLat = null;
@@ -150,6 +156,10 @@
             $startLat = $schoolLat;
             $startLng = $schoolLng;
         }
+        
+        // Determine initial target state based on events
+        $hasPickedUp = $trip->events->contains('type', 'picked_up');
+        $hasDroppedOff = $trip->events->contains('type', 'dropped_off');
     @endphp
 
     @if ($startLat && $startLng)
@@ -158,14 +168,32 @@
     map.setView([initialLat, initialLng], 13);
     
     // Mark Start Point
-    L.marker([initialLat, initialLng]).addTo(map)
+    const startMarker = L.marker([initialLat, initialLng]).addTo(map)
       .bindPopup("Start Point");
     
     // Mark End Point
+    let endMarker = null;
     @if ($isMorning && $schoolLat && $schoolLng)
-       L.marker([{{ $schoolLat }}, {{ $schoolLng }}]).addTo(map).bindPopup("School (Drop-off)");
+       endMarker = L.marker([{{ $schoolLat }}, {{ $schoolLng }}]).addTo(map).bindPopup("School (Drop-off)");
     @elseif (!$isMorning && $homeLat && $homeLng)
-       L.marker([{{ $homeLat }}, {{ $homeLng }}]).addTo(map).bindPopup("Home (Drop-off)");
+       endMarker = L.marker([{{ $homeLat }}, {{ $homeLng }}]).addTo(map).bindPopup("Home (Drop-off)");
+    @endif
+
+    // Set Initial Target
+    @if (!$hasPickedUp && !$hasDroppedOff)
+        // Target is Pickup
+        currentTarget = {
+            lat: initialLat,
+            lng: initialLng,
+            type: 'pickup'
+        };
+    @elseif ($hasPickedUp && !$hasDroppedOff)
+        // Target is Dropoff
+        @if ($isMorning)
+            currentTarget = { lat: {{ $schoolLat }}, lng: {{ $schoolLng }}, type: 'dropoff' };
+        @else
+            currentTarget = { lat: {{ $homeLat }}, lng: {{ $homeLng }}, type: 'dropoff' };
+        @endif
     @endif
 
     @else
@@ -189,6 +217,60 @@
             marker.setLatLng(lastPoint);
         }
         map.fitBounds(pathLine.getBounds(), {padding: [24, 24]});
+    }
+
+    function updateEta(driverLat, driverLng) {
+        if (!currentTarget || !driverLat || !driverLng) return;
+
+        // If routing control exists, remove it
+        if (routingControl) {
+            map.removeControl(routingControl);
+        }
+
+        const waypoints = [
+            L.latLng(driverLat, driverLng),
+            L.latLng(currentTarget.lat, currentTarget.lng)
+        ];
+
+        routingControl = L.Routing.control({
+            waypoints: waypoints,
+            router: L.Routing.osrmv1({
+                serviceUrl: 'https://router.project-osrm.org/route/v1'
+            }),
+            lineOptions: {
+                styles: [{color: '#10b981', opacity: 0.6, weight: 4, dashArray: '10, 10'}] // Dashed green line for projected route
+            },
+            show: false,
+            addWaypoints: false,
+            draggableWaypoints: false,
+            fitSelectedRoutes: false,
+            createMarker: function() { return null; }
+        })
+        .on('routesfound', function(e) {
+            const routes = e.routes;
+            if (routes && routes.length > 0) {
+                const summary = routes[0].summary;
+                const minutes = Math.round(summary.totalTime / 60);
+                const distance = (summary.totalDistance / 1000).toFixed(1);
+
+                const label = currentTarget.type === 'pickup' ? 'Arriving at Pickup' : 'Arriving at Drop-off';
+                
+                // Update UI
+                const etaDisplay = document.getElementById('eta-display');
+                if (etaDisplay) {
+                    etaDisplay.innerHTML = `
+                        <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-lg dark:bg-indigo-500/20 dark:border-indigo-500/20">
+                            <h6 class="text-indigo-500 font-bold mb-1">${label}</h6>
+                            <div class="flex items-baseline gap-2">
+                                <span class="text-2xl font-bold text-slate-800 dark:text-zink-50">${minutes} min</span>
+                                <span class="text-sm text-slate-500 dark:text-zink-200">(${distance} km)</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+        })
+        .addTo(map);
     }
 
     if (window.Echo) {
@@ -215,18 +297,42 @@
                     pathLine = L.polyline([[lat, lng]], {color: '#2563eb', weight: 4}).addTo(map);
                 }
 
-                map.setView([lat, lng], map.getZoom());
+                // Update ETA
+                updateEta(lat, lng);
+
+                // Keep map centered on driver if following
+                // map.setView([lat, lng], map.getZoom());
             });
 
         window.Echo.private('parents.{{ auth()->id() }}')
             .listen('.trip.event', function (e) {
                 if (e.trip_id != {{ $trip->id }}) return;
 
+                // Update Target based on event
+                if (e.type === 'picked_up') {
+                    // Switch to Dropoff
+                     @if ($isMorning)
+                        currentTarget = { lat: {{ $schoolLat }}, lng: {{ $schoolLng }}, type: 'dropoff' };
+                    @else
+                        currentTarget = { lat: {{ $homeLat }}, lng: {{ $homeLng }}, type: 'dropoff' };
+                    @endif
+                    // Trigger ETA update with last known driver location (if marker exists)
+                    if (marker) {
+                        const latLng = marker.getLatLng();
+                        updateEta(latLng.lat, latLng.lng);
+                    }
+                } else if (e.type === 'dropped_off') {
+                    currentTarget = null;
+                    if (routingControl) {
+                        map.removeControl(routingControl);
+                    }
+                    const etaDisplay = document.getElementById('eta-display');
+                    if (etaDisplay) etaDisplay.innerHTML = '';
+                }
+
                 // Update Timeline
                 const list = document.querySelector('ol');
                 if (!list) {
-                     // If list doesn't exist (empty state), reload page to init structure or create it dynamically.
-                     // For simplicity, we reload if it was empty
                      window.location.reload();
                      return;
                 }
@@ -254,9 +360,7 @@
                 `;
                 list.appendChild(item);
                 
-                // If dropped_off, maybe show rate button?
                 if (e.type === 'dropped_off') {
-                    // Refresh to show rate button if backend supports it
                     setTimeout(() => window.location.reload(), 2000);
                 }
             });

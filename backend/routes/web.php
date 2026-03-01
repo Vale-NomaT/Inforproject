@@ -135,6 +135,9 @@ Route::middleware(['auth', 'role:driver'])->group(function () {
     Route::post('/driver/trips/{trip}/start', [DriverTripController::class, 'start'])
         ->name('driver.trips.start');
 
+    Route::post('/driver/location', [DriverTripController::class, 'updateDriverLocation'])
+        ->name('driver.location.update');
+
     Route::post('/driver/trips/{trip}/location', [DriverTripController::class, 'updateLocation'])
         ->name('driver.trips.location');
 

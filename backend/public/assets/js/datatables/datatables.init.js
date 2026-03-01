@@ -69,13 +69,15 @@ if (document.querySelector('#example')) {
 
 //Show / hide columns dynamically
 
-const tableDynamically = new DataTable('#tableDynamically', {
+const tableDynamically = document.querySelector('#tableDynamically') ? new DataTable('#tableDynamically', {
     pageLength: 5,
-});
+}) : null;
 
 document.querySelectorAll('button.toggle-vis').forEach((el) => {
     el.addEventListener('click', function (e) {
         e.preventDefault();
+
+        if (!tableDynamically) return;
 
         let columnIdx = e.target.getAttribute('data-column');
         let column = tableDynamically.column(columnIdx);
@@ -87,22 +89,24 @@ document.querySelectorAll('button.toggle-vis').forEach((el) => {
 
 //Row selection and deletion (single row)
 
-const rowSelectionDeletion = new DataTable('#rowSelectionDeletion');
+const rowSelectionDeletion = document.querySelector('#rowSelectionDeletion') ? new DataTable('#rowSelectionDeletion') : null;
 
-rowSelectionDeletion.on('click', 'tbody tr', (e) => {
-    let classList = e.currentTarget.classList;
+if (rowSelectionDeletion) {
+    rowSelectionDeletion.on('click', 'tbody tr', (e) => {
+        let classList = e.currentTarget.classList;
 
-    if (classList.contains('selected')) {
-        classList.remove('selected');
-    }
-    else {
-        rowSelectionDeletion.rows('.selected').nodes().each((row) => row.classList.remove('selected'));
-        classList.add('selected');
-    }
-});
+        if (classList.contains('selected')) {
+            classList.remove('selected');
+        }
+        else {
+            rowSelectionDeletion.rows('.selected').nodes().each((row) => row.classList.remove('selected'));
+            classList.add('selected');
+        }
+    });
+}
 
 const deleteButton = document.querySelector('#deleteButton');
-if (deleteButton) {
+if (deleteButton && rowSelectionDeletion) {
     deleteButton.addEventListener('click', function () {
         rowSelectionDeletion.row('.selected').remove().draw(false);
     });
