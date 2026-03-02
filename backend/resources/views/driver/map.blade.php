@@ -376,28 +376,25 @@
             if (statusEl) statusEl.classList.remove('hidden');
 
             setInterval(() => {
-                activeTrips.forEach(card => {
-                    const tripId = card.dataset.tripId;
-                    
-                    if (navigator.geolocation) {
-                        navigator.geolocation.getCurrentPosition(position => {
-                            const { latitude, longitude } = position.coords;
-                            
-                            fetch(`/driver/trips/${tripId}/location`, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                },
-                                body: JSON.stringify({
-                                    lat: latitude,
-                                    lng: longitude
-                                })
-                            }).catch(console.error);
-                        });
-                    }
-                });
-            }, 15000);
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(position => {
+                        const { latitude, longitude } = position.coords;
+                        
+                        // Send single location update for driver (updates all active trips on backend)
+                        fetch('{{ route("driver.location.update") }}', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            },
+                            body: JSON.stringify({
+                                lat: latitude,
+                                lng: longitude
+                            })
+                        }).catch(console.error);
+                    });
+                }
+            }, 30000); // Throttle to 30 seconds
         }
     });
 </script>

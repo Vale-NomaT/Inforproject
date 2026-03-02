@@ -502,6 +502,10 @@
     function updateNavigation() {
         if (!map || !lastDriverLatLng) return;
 
+        const now = Date.now();
+        if (now - lastNavigationUpdate < 10000) return; // Throttle OSRM calls to every 10 seconds
+        lastNavigationUpdate = now;
+
         const run = getActiveRun();
         if (!run || !run.trips || run.trips.length === 0) return;
 
@@ -616,6 +620,9 @@
         if (window.lucide) window.lucide.createIcons();
     }
 
+    let lastNavigationUpdate = 0;
+    let lastSentLatLng = null;
+
     function sendTripEvent(tripId, type, latitude, longitude, btn = null) {
         fetch(`/driver/trips/${tripId}/events`, {
             method: 'POST',
@@ -635,7 +642,7 @@
         })
         .then(data => {
             if (data.status === 'ok') {
-                window.location.reload();
+                updateTripCardUI(tripId, type);
             } else {
                 throw new Error(data.message || 'Unknown error');
             }
@@ -645,6 +652,72 @@
             alert('Failed to update trip status. Please try again.');
             resetButton(btn);
         });
+    }
+
+    function updateTripCardUI(tripId, type) {
+        const card = document.querySelector(`.card[data-trip-id="${tripId}"]`);
+        if (!card) return;
+
+        const buttons = card.querySelectorAll('button[type="button"]');
+        // Expected order: 0: Arrived, 1: Picked Up, 2: Arrived Dropoff, 3: Complete
+        
+        // Define styles
+        const baseClass = "text-xs px-3 py-2 rounded shadow-sm transition-colors duration-200 border ";
+        const activeClass = "text-white focus:ring focus:ring-offset-1 ";
+        const disabledClass = "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed dark:bg-zink-600 dark:text-zink-400 dark:border-zink-500 ";
+        
+        const styles = [
+            { active: "bg-yellow-500 border-yellow-500 hover:bg-yellow-600 hover:border-yellow-600 focus:ring-yellow-200", label: "Arrived at Pickup" },
+            { active: "bg-purple-500 border-purple-500 hover:bg-purple-600 hover:border-purple-600 focus:ring-purple-200", label: "Picked Up" },
+            { active: "bg-orange-500 border-orange-500 hover:bg-orange-600 hover:border-orange-600 focus:ring-orange-200", label: "Arrived at Drop-off" },
+            { active: "bg-green-500 border-green-500 hover:bg-green-600 hover:border-green-600 focus:ring-green-200", label: "Complete Trip", icon: true }
+        ];
+
+        let nextStageIndex = -1;
+        
+        if (type === 'arrived') nextStageIndex = 1;
+        else if (type === 'picked_up') nextStageIndex = 2;
+        else if (type === 'arrived_dropoff') nextStageIndex = 3;
+        else if (type === 'dropped_off') nextStageIndex = 4; // Completed
+
+        buttons.forEach((btn, index) => {
+            // Reset button content if it was loading
+            if (btn.dataset.originalContent) {
+                btn.innerHTML = btn.dataset.originalContent;
+            }
+
+            // Update state
+            if (index < nextStageIndex) {
+                // Already completed steps - keep them disabled but maybe styled differently? 
+                // For now, keep them disabled standard
+                btn.className = baseClass + disabledClass;
+                btn.disabled = true;
+                btn.removeAttribute('onclick');
+            } else if (index === nextStageIndex) {
+                // Current active step
+                btn.className = baseClass + activeClass + styles[index].active;
+                btn.disabled = false;
+                // Add onclick handler back if needed.
+                // The original HTML logic used blade conditions, so if it was disabled initially, it has no onclick. We must add it.
+                const nextType = index === 1 ? 'picked_up' : (index === 2 ? 'arrived_dropoff' : 'dropped_off');
+                btn.setAttribute('onclick', `logEvent(this, '${tripId}', '${nextType}')`);
+            } else {
+                // Future steps
+                btn.className = baseClass + disabledClass;
+                btn.disabled = true;
+                btn.removeAttribute('onclick');
+            }
+        });
+        
+        if (nextStageIndex === 4) {
+            // Trip completed
+            // Maybe move to completed section or just mark as done visually
+            const statusBadge = card.querySelector('.flex-col.items-end span');
+            if (statusBadge) {
+                statusBadge.className = "px-2.5 py-0.5 text-xs inline-block font-medium rounded border border-slate-200 bg-slate-100 text-slate-500 dark:bg-slate-500/20 dark:border-slate-500/20";
+                statusBadge.innerText = "Completed";
+            }
+        }
     }
 
     window.logEvent = function(btn, tripId, type) {
@@ -665,8 +738,8 @@
 
     function updateBackendLocation(lat, lng) {
         const now = Date.now();
-        // Throttle updates to every 10 seconds
-        if (now - lastBackendUpdate < 10000) return;
+        // Throttle updates to every 30 seconds to prevent server overload (502 errors)
+        if (now - lastBackendUpdate < 30000) return;
         
         lastBackendUpdate = now;
         fetch(updateLocationUrl, {
