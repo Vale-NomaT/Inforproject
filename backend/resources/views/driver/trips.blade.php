@@ -623,7 +623,7 @@
     let lastNavigationUpdate = 0;
     let lastSentLatLng = null;
 
-    function sendTripEvent(tripId, type, latitude, longitude, btn = null) {
+    function sendTripEvent(tripId, type, latitude, longitude, btn = null, isOptimistic = false) {
         fetch(`/driver/trips/${tripId}/events`, {
             method: 'POST',
             headers: {
@@ -642,15 +642,23 @@
         })
         .then(data => {
             if (data.status === 'ok') {
-                updateTripCardUI(tripId, type);
+                if (!isOptimistic) {
+                    updateTripCardUI(tripId, type);
+                }
+                // If optimistic, UI is already updated.
             } else {
                 throw new Error(data.message || 'Unknown error');
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            alert('Failed to update trip status. Please try again.');
-            resetButton(btn);
+            if (isOptimistic) {
+                alert('Failed to update trip status. Reloading to sync state...');
+                window.location.reload();
+            } else {
+                alert('Failed to update trip status. Please try again.');
+                resetButton(btn);
+            }
         });
     }
 
@@ -721,19 +729,23 @@
     }
 
     window.logEvent = function(btn, tripId, type) {
-        setButtonLoading(btn);
+        // Optimistic UI: Update button state IMMEDIATELY
+        // This makes the app feel "instant" to the user
+        updateTripCardUI(tripId, type);
 
-        if (geoPermissionDenied || !navigator.geolocation) {
-            sendTripEvent(tripId, type, null, null, btn);
-            return;
+        // Get Location (Non-blocking)
+        let lat = null;
+        let lng = null;
+        
+        // Use cached location from background tracker if available and recent
+        if (typeof lastDriverLatLng !== 'undefined' && lastDriverLatLng) {
+            lat = lastDriverLatLng.lat;
+            lng = lastDriverLatLng.lng;
         }
 
-        navigator.geolocation.getCurrentPosition(position => {
-            const { latitude, longitude } = position.coords;
-            sendTripEvent(tripId, type, latitude, longitude, btn);
-        }, error => {
-            sendTripEvent(tripId, type, null, null, btn);
-        });
+        // Send request immediately (don't wait for fresh GPS fix)
+        // Pass isOptimistic=true to handle errors differently (reload on fail)
+        sendTripEvent(tripId, type, lat, lng, btn, true);
     };
 
     function updateBackendLocation(lat, lng) {
