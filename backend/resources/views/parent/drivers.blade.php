@@ -138,10 +138,22 @@
                                 <form method="POST" action="{{ route('parent.children.drivers.store', ['child' => $child->id]) }}" class="mt-auto booking-form">
                                     @csrf
                                     <input type="hidden" name="driver_id" value="{{ $driver->id }}">
-                                    <button type="submit" class="w-full flex items-center justify-center gap-2 btn bg-custom-500 border-custom-500 hover:bg-custom-600 hover:border-custom-600 text-white shadow-md shadow-custom-500/20 py-2.5 font-medium transition-all hover:-translate-y-0.5">
-                                        <span>Request Booking</span>
-                                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                                    </button>
+                                    @if (isset($entry['booking_status']) && ($entry['booking_status'] === 'pending' || $entry['booking_status'] === 'approved' || $entry['booking_status'] === 'accepted'))
+                                        <button type="button" disabled class="w-full flex items-center justify-center gap-2 btn bg-slate-400 border-slate-400 cursor-not-allowed opacity-100 text-white shadow-none py-2.5 font-medium">
+                                            @if($entry['booking_status'] === 'pending')
+                                                <i data-lucide="clock" class="w-4 h-4"></i>
+                                                <span>Request Pending</span>
+                                            @else
+                                                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                                <span>Driver Booked</span>
+                                            @endif
+                                        </button>
+                                    @else
+                                        <button type="submit" class="w-full flex items-center justify-center gap-2 btn bg-custom-500 border-custom-500 hover:bg-custom-600 hover:border-custom-600 text-white shadow-md shadow-custom-500/20 py-2.5 font-medium transition-all hover:-translate-y-0.5">
+                                            <span>Request Booking</span>
+                                            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                                        </button>
+                                    @endif
                                 </form>
                             </div>
                         </div>

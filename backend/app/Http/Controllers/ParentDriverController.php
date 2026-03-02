@@ -33,6 +33,20 @@ class ParentDriverController extends Controller
 
         $drivers = $this->eligibleDriverService->getEligibleDriversWithPricing($child);
 
+        // Get existing bookings for this child
+        $driverIds = $drivers->map(fn($d) => $d['driver']->id);
+        $bookings = BookingRequest::where('child_id', $child->id)
+            ->whereIn('driver_id', $driverIds)
+            ->get()
+            ->keyBy('driver_id');
+
+        // Merge booking info
+        $drivers = $drivers->map(function ($entry) use ($bookings) {
+            $booking = $bookings->get($entry['driver']->id);
+            $entry['booking_status'] = $booking ? $booking->status : null;
+            return $entry;
+        });
+
         return view('parent.drivers', [
             'child' => $child,
             'drivers' => $drivers,
