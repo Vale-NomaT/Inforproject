@@ -101,12 +101,12 @@
 
                                 <div class="flex items-center gap-2 md:justify-end">
                                     @if ($runStatus === \App\Models\Trip::STATUS_SCHEDULED)
-                                        <form method="POST" action="{{ route('driver.trips.start') }}" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').innerText = 'Starting...'; this.querySelector('button[type=submit]').classList.add('opacity-75', 'cursor-not-allowed');" onclick="event.stopPropagation()">
+                                        <form method="POST" action="{{ route('driver.trips.start') }}" onsubmit="return confirm('This will start ALL trips in this run simultaneously. Are you sure?');" onclick="event.stopPropagation()">
                                             @csrf
                                             <input type="hidden" name="date" id="date-{{ $run['key'] }}" value="{{ $runDate }}">
                                             <input type="hidden" name="type" id="type-{{ $run['key'] }}" value="{{ $runType }}">
                                             <button type="submit" class="text-white btn bg-custom-500 border-custom-500 hover:text-white hover:bg-custom-600 hover:border-custom-600 focus:text-white focus:bg-custom-600 focus:border-custom-600 focus:ring focus:ring-custom-100 active:text-white active:bg-custom-600 active:border-custom-600 active:ring active:ring-custom-100 dark:ring-custom-400/20">
-                                                Start Trip
+                                                Start All Trips
                                             </button>
                                         </form>
                                     @endif
@@ -214,6 +214,15 @@
                                                 <button type="button" @if($btn4Active) onclick="logEvent(this, '{{ $trip->id }}', 'dropped_off')" @else disabled @endif class="{{ $btn4Class }}">
                                                     @if($isCompleted) <i data-lucide="check-double" class="w-4 h-4 inline-block mr-1"></i> @else <i data-lucide="check-circle" class="w-4 h-4 inline-block mr-1"></i> @endif Complete Trip
                                                 </button>
+                                            </div>
+                                        @elseif ($trip->status === \App\Models\Trip::STATUS_SCHEDULED)
+                                            <div class="mt-3 flex flex-wrap gap-2 justify-end">
+                                                <form method="POST" action="{{ route('driver.trips.start-single', $trip->id) }}" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').innerText = 'Starting...';">
+                                                    @csrf
+                                                    <button type="submit" class="text-xs px-3 py-2 rounded shadow-sm transition-colors duration-200 border text-white focus:ring focus:ring-offset-1 bg-green-500 border-green-500 hover:bg-green-600 hover:border-green-600 focus:ring-green-200">
+                                                        <i data-lucide="play" class="w-4 h-4 inline-block mr-1"></i> Start This Trip
+                                                    </button>
+                                                </form>
                                             </div>
                                         @endif
                                     </div>

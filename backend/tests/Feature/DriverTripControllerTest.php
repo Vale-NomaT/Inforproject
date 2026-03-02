@@ -105,7 +105,7 @@ class DriverTripControllerTest extends TestCase
         $indexResponse->assertSee('Child One');
         $indexResponse->assertDontSee('Child Two');
 
-        $startResponse = $this->post(route('driver.trips.start', ['trip' => $tripForDriver->id]));
+        $startResponse = $this->post(route('driver.trips.start-single', ['trip' => $tripForDriver->id]));
         $startResponse->assertRedirect();
 
         $this->assertDatabaseHas('trips', [

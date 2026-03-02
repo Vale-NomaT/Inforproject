@@ -134,6 +134,15 @@
                                 @if($isCompleted) <i data-lucide="check-double" class="w-4 h-4 inline-block mr-1"></i> @else <i data-lucide="check-circle" class="w-4 h-4 inline-block mr-1"></i> @endif Complete Trip
                             </button>
                         </div>
+                    @elseif ($trip->status === \App\Models\Trip::STATUS_SCHEDULED)
+                        <div class="mt-3">
+                            <form method="POST" action="{{ route('driver.trips.start-single', $trip->id) }}" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').innerText = 'Starting...';">
+                                @csrf
+                                <button type="submit" class="text-xs px-3 py-2 rounded shadow-sm transition-colors duration-200 border text-white focus:ring focus:ring-offset-1 bg-green-500 border-green-500 hover:bg-green-600 hover:border-green-600 focus:ring-green-200 w-full">
+                                    <i data-lucide="play" class="w-4 h-4 inline-block mr-1"></i> Start This Trip
+                                </button>
+                            </form>
+                        </div>
                     @endif
                 </div>
             @endforeach
