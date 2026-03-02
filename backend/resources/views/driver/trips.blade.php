@@ -64,19 +64,29 @@
                             ? 'bg-orange-100 text-orange-500 border-orange-200 dark:bg-orange-500/20 dark:border-orange-500/20'
                             : 'bg-purple-100 text-purple-500 border-purple-200 dark:bg-purple-500/20 dark:border-purple-500/20';
                         $runStatus = $run['status'];
-                        $runStatusClass = $runStatus === \App\Models\Trip::STATUS_IN_PROGRESS
-                            ? 'border-green-200 bg-green-100 text-green-500 dark:bg-green-500/20 dark:border-green-500/20'
-                            : 'border-yellow-200 bg-yellow-100 text-yellow-500 dark:bg-yellow-500/20 dark:border-yellow-500/20';
+                        $runStatusClass = match($runStatus) {
+                            \App\Models\Trip::STATUS_IN_PROGRESS => 'border-green-200 bg-green-100 text-green-500 dark:bg-green-500/20 dark:border-green-500/20',
+                            \App\Models\Trip::STATUS_COMPLETED => 'border-slate-200 bg-slate-100 text-slate-500 dark:bg-slate-500/20 dark:border-slate-500/20',
+                            default => 'border-yellow-200 bg-yellow-100 text-yellow-500 dark:bg-yellow-500/20 dark:border-yellow-500/20',
+                        };
                     @endphp
 
-                    <details class="card" data-run-key="{{ $run['key'] }}">
+                    <details class="card {{ $runStatus === \App\Models\Trip::STATUS_COMPLETED ? 'opacity-75 bg-slate-50 dark:bg-zink-700/50' : '' }}" data-run-key="{{ $run['key'] }}">
                         <summary class="card-body cursor-pointer list-none">
                             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                                 <div class="flex flex-col gap-1">
                                     <div class="flex flex-wrap items-center gap-2">
                                         <h6 class="text-15 font-semibold text-slate-900 dark:text-zink-50">Trip {{ $run['key'] }}</h6>
                                         <span class="px-2 py-0.5 text-xs font-medium rounded border {{ $runTypeClass }}">{{ $runType === \App\Models\Trip::TYPE_MORNING ? 'Morning Run' : 'Afternoon Run' }}</span>
-                                        <span class="px-2.5 py-0.5 text-xs inline-block font-medium rounded border {{ $runStatusClass }}">{{ $runStatus === \App\Models\Trip::STATUS_IN_PROGRESS ? 'In Progress' : 'Scheduled' }}</span>
+                                        <span class="px-2.5 py-0.5 text-xs inline-block font-medium rounded border {{ $runStatusClass }}">
+                                            @if($runStatus === \App\Models\Trip::STATUS_COMPLETED)
+                                                Completed
+                                            @elseif($runStatus === \App\Models\Trip::STATUS_IN_PROGRESS)
+                                                In Progress
+                                            @else
+                                                Scheduled
+                                            @endif
+                                        </span>
                                     </div>
                                     <p class="text-slate-500 dark:text-zink-200 text-sm">
                                         {{ $runLabel }} • {{ count($run['trips']) }} {{ count($run['trips']) === 1 ? 'child' : 'children' }}
@@ -85,7 +95,7 @@
 
                                 <div class="flex items-center gap-2 md:justify-end">
                                     @if ($runStatus === \App\Models\Trip::STATUS_SCHEDULED)
-                                        <form method="POST" action="{{ route('driver.runs.start') }}">
+                                        <form method="POST" action="{{ route('driver.runs.start') }}" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').innerText = 'Starting...'; this.querySelector('button[type=submit]').classList.add('opacity-75', 'cursor-not-allowed');">
                                             @csrf
                                             <input type="hidden" name="date" value="{{ $runDate }}">
                                             <input type="hidden" name="type" value="{{ $runType }}">
@@ -132,23 +142,71 @@
                                                     <span class="px-2.5 py-0.5 text-xs inline-block font-medium rounded border border-green-200 bg-green-100 text-green-500 dark:bg-green-500/20 dark:border-green-500/20">
                                                         In Progress
                                                     </span>
+                                                @elseif ($trip->status === \App\Models\Trip::STATUS_COMPLETED)
+                                                    <span class="px-2.5 py-0.5 text-xs inline-block font-medium rounded border border-slate-200 bg-slate-100 text-slate-500 dark:bg-slate-500/20 dark:border-slate-500/20">
+                                                        Completed
+                                                    </span>
                                                 @endif
                                             </div>
                                         </div>
 
-                                        @if ($trip->status === \App\Models\Trip::STATUS_IN_PROGRESS)
+                                        @if ($trip->status === \App\Models\Trip::STATUS_IN_PROGRESS || $trip->status === \App\Models\Trip::STATUS_COMPLETED)
+                                            @php
+                                                $events = $trip->events->pluck('type')->toArray();
+                                                $hasArrived = in_array('arrived', $events);
+                                                $hasPickedUp = in_array('picked_up', $events);
+                                                $hasArrivedDropoff = in_array('arrived_dropoff', $events);
+                                                $isCompleted = $trip->status === \App\Models\Trip::STATUS_COMPLETED;
+                                                
+                                                // Determine active stage (1=Arrived, 2=Picked Up, 3=Arrived Dropoff, 4=Complete, 5=All Done)
+                                                $activeStage = 1;
+                                                if ($isCompleted) $activeStage = 5;
+                                                elseif ($hasArrivedDropoff) $activeStage = 4;
+                                                elseif ($hasPickedUp) $activeStage = 3;
+                                                elseif ($hasArrived) $activeStage = 2;
+
+                                                // Define button classes
+                                                $baseBtnClass = "text-xs px-3 py-2 rounded shadow-sm transition-colors duration-200 border ";
+                                                $activeClass = "text-white focus:ring focus:ring-offset-1 ";
+                                                $disabledClass = "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed dark:bg-zink-600 dark:text-zink-400 dark:border-zink-500 ";
+
+                                                // Button 1: Arrived at Pickup
+                                                $btn1Active = $activeStage === 1;
+                                                $btn1Class = $btn1Active 
+                                                    ? $baseBtnClass . $activeClass . "bg-yellow-500 border-yellow-500 hover:bg-yellow-600 hover:border-yellow-600 focus:ring-yellow-200"
+                                                    : $baseBtnClass . $disabledClass;
+
+                                                // Button 2: Picked Up
+                                                $btn2Active = $activeStage === 2;
+                                                $btn2Class = $btn2Active 
+                                                    ? $baseBtnClass . $activeClass . "bg-purple-500 border-purple-500 hover:bg-purple-600 hover:border-purple-600 focus:ring-purple-200"
+                                                    : $baseBtnClass . $disabledClass;
+
+                                                // Button 3: Arrived at Drop-off
+                                                $btn3Active = $activeStage === 3;
+                                                $btn3Class = $btn3Active 
+                                                    ? $baseBtnClass . $activeClass . "bg-orange-500 border-orange-500 hover:bg-orange-600 hover:border-orange-600 focus:ring-orange-200"
+                                                    : $baseBtnClass . $disabledClass;
+
+                                                // Button 4: Complete Trip
+                                                $btn4Active = $activeStage === 4;
+                                                $btn4Class = $btn4Active 
+                                                    ? "text-sm px-4 py-2 font-bold shadow-md " . $activeClass . "bg-green-500 border-green-500 hover:bg-green-600 hover:border-green-600 focus:ring-green-200"
+                                                    : "text-sm px-4 py-2 font-bold shadow-md " . $disabledClass;
+                                            @endphp
+
                                             <div class="mt-3 flex flex-wrap gap-2 justify-end">
-                                                <button type="button" onclick="logEvent('{{ $trip->id }}', 'arrived')" class="text-white btn bg-yellow-500 border-yellow-500 hover:text-white hover:bg-yellow-600 hover:border-yellow-600 focus:text-white focus:bg-yellow-600 focus:border-yellow-600 focus:ring focus:ring-yellow-100 active:text-white active:bg-yellow-600 active:border-yellow-600 active:ring active:ring-yellow-100 dark:ring-yellow-400/20 text-xs">
+                                                <button type="button" @if($btn1Active) onclick="logEvent('{{ $trip->id }}', 'arrived')" @else disabled @endif class="{{ $btn1Class }}">
                                                     Arrived at Pickup
                                                 </button>
-                                                <button type="button" onclick="logEvent('{{ $trip->id }}', 'picked_up')" class="text-white btn bg-purple-500 border-purple-500 hover:text-white hover:bg-purple-600 hover:border-purple-600 focus:text-white focus:bg-purple-600 focus:border-purple-600 focus:ring focus:ring-purple-100 active:text-white active:bg-purple-600 active:border-purple-600 active:ring active:ring-purple-100 dark:ring-purple-400/20 text-xs">
+                                                <button type="button" @if($btn2Active) onclick="logEvent('{{ $trip->id }}', 'picked_up')" @else disabled @endif class="{{ $btn2Class }}">
                                                     Picked Up
                                                 </button>
-                                                <button type="button" onclick="logEvent('{{ $trip->id }}', 'arrived_dropoff')" class="text-white btn bg-orange-500 border-orange-500 hover:text-white hover:bg-orange-600 hover:border-orange-600 focus:text-white focus:bg-orange-600 focus:border-orange-600 focus:ring focus:ring-orange-100 active:text-white active:bg-orange-600 active:border-orange-600 active:ring active:ring-orange-100 dark:ring-orange-400/20 text-xs">
+                                                <button type="button" @if($btn3Active) onclick="logEvent('{{ $trip->id }}', 'arrived_dropoff')" @else disabled @endif class="{{ $btn3Class }}">
                                                     Arrived at Drop-off
                                                 </button>
-                                                <button type="button" onclick="logEvent('{{ $trip->id }}', 'dropped_off')" class="text-white btn bg-green-500 border-green-500 hover:text-white hover:bg-green-600 hover:border-green-600 focus:text-white focus:bg-green-600 focus:border-green-600 focus:ring focus:ring-green-100 active:text-white active:bg-green-600 active:border-green-600 active:ring active:ring-green-100 dark:ring-green-400/20 text-sm px-4 py-2 font-bold shadow-md">
-                                                    <i data-lucide="check-circle" class="w-4 h-4 inline-block mr-1"></i> Complete Trip
+                                                <button type="button" @if($btn4Active) onclick="logEvent('{{ $trip->id }}', 'dropped_off')" @else disabled @endif class="{{ $btn4Class }}">
+                                                    @if($isCompleted) <i data-lucide="check-double" class="w-4 h-4 inline-block mr-1"></i> @else <i data-lucide="check-circle" class="w-4 h-4 inline-block mr-1"></i> @endif Complete Trip
                                                 </button>
                                             </div>
                                         @endif

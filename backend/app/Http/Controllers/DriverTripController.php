@@ -19,9 +19,15 @@ class DriverTripController extends Controller
 {
     public function index(Request $request): View
     {
-        $trips = Trip::with(['child.school', 'child.pickupLocation'])
+        $trips = Trip::with(['child.school', 'child.pickupLocation', 'events'])
             ->where('driver_id', $request->user()->id)
-            ->whereIn('status', [Trip::STATUS_SCHEDULED, Trip::STATUS_IN_PROGRESS])
+            ->where(function ($query) {
+                $query->whereIn('status', [Trip::STATUS_SCHEDULED, Trip::STATUS_IN_PROGRESS])
+                      ->orWhere(function ($q) {
+                          $q->where('status', Trip::STATUS_COMPLETED)
+                            ->whereDate('scheduled_date', now());
+                      });
+            })
             ->orderBy('scheduled_date')
             ->orderByDesc('type') // Morning first
             ->get();
@@ -35,13 +41,22 @@ class DriverTripController extends Controller
             ->map(function ($group, string $key) {
                 [$date, $type] = array_pad(explode('|', $key, 2), 2, null);
 
+                $allCompleted = $group->every(fn (Trip $trip) => $trip->status === Trip::STATUS_COMPLETED);
                 $hasInProgress = $group->contains(fn (Trip $trip) => $trip->status === Trip::STATUS_IN_PROGRESS);
+                $anyCompleted = $group->contains(fn (Trip $trip) => $trip->status === Trip::STATUS_COMPLETED);
+
+                $status = Trip::STATUS_SCHEDULED;
+                if ($allCompleted) {
+                    $status = Trip::STATUS_COMPLETED;
+                } elseif ($hasInProgress || $anyCompleted) {
+                    $status = Trip::STATUS_IN_PROGRESS;
+                }
 
                 return [
                     'key' => $key,
                     'date' => $date,
                     'type' => $type,
-                    'status' => $hasInProgress ? Trip::STATUS_IN_PROGRESS : Trip::STATUS_SCHEDULED,
+                    'status' => $status,
                     'trips' => $group->values(),
                 ];
             })
@@ -55,7 +70,7 @@ class DriverTripController extends Controller
 
     public function map(Request $request): View
     {
-        $trips = Trip::with(['child.school', 'child.pickupLocation'])
+        $trips = Trip::with(['child.school', 'child.pickupLocation', 'events'])
             ->where('driver_id', $request->user()->id)
             ->whereIn('status', [Trip::STATUS_SCHEDULED, Trip::STATUS_IN_PROGRESS])
             ->whereDate('scheduled_date', now())
@@ -135,9 +150,15 @@ class DriverTripController extends Controller
             return back();
         }
 
+        $childNames = [];
+
         foreach ($trips as $trip) {
             $trip->status = Trip::STATUS_IN_PROGRESS;
             $trip->save();
+
+            if ($trip->child) {
+                $childNames[] = $trip->child->first_name;
+            }
 
             $event = TripEvent::create([
                 'trip_id' => $trip->id,
@@ -152,7 +173,16 @@ class DriverTripController extends Controller
             $this->notifyParent($trip, 'Driver has started the trip and is en route.' . $etaMsg);
         }
 
-        return back()->with('status', 'Route started. Tracking is now active.');
+        $message = 'Route started.';
+        if (!empty($childNames)) {
+            $namesStr = implode(', ', array_slice($childNames, 0, 3));
+            if (count($childNames) > 3) {
+                $namesStr .= ' and ' . (count($childNames) - 3) . ' others';
+            }
+            $message .= " Picking up: $namesStr.";
+        }
+
+        return back()->with('status', $message . ' Tracking is now active.');
     }
 
     /**
