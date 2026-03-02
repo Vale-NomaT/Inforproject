@@ -247,30 +247,33 @@
             createMarker: function() { return null; }
         })
         .on('routesfound', function(e) {
-            const routes = e.routes;
-            if (routes && routes.length > 0) {
-                const summary = routes[0].summary;
-                const minutes = Math.round(summary.totalTime / 60);
-                const distance = (summary.totalDistance / 1000).toFixed(1);
+                const routes = e.routes;
+                if (routes && routes.length > 0) {
+                    const summary = routes[0].summary;
+                    const minutes = Math.round(summary.totalTime / 60);
+                    const distance = (summary.totalDistance / 1000).toFixed(1);
 
-                const label = currentTarget.type === 'pickup' ? 'Arriving at Pickup' : 'Arriving at Drop-off';
-                
-                // Update UI
-                const etaDisplay = document.getElementById('eta-display');
-                if (etaDisplay) {
-                    etaDisplay.innerHTML = `
-                        <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-lg dark:bg-indigo-500/20 dark:border-indigo-500/20">
-                            <h6 class="text-indigo-500 font-bold mb-1">${label}</h6>
-                            <div class="flex items-baseline gap-2">
-                                <span class="text-2xl font-bold text-slate-800 dark:text-zink-50">${minutes} min</span>
-                                <span class="text-sm text-slate-500 dark:text-zink-200">(${distance} km)</span>
+                    const label = currentTarget.type === 'pickup' ? 'Arriving at Pickup' : 'Arriving at Drop-off';
+                    
+                    // Update UI
+                    const etaDisplay = document.getElementById('eta-display');
+                    if (etaDisplay) {
+                        etaDisplay.innerHTML = `
+                            <div class="p-3 bg-indigo-50 border border-indigo-200 rounded-lg dark:bg-indigo-500/20 dark:border-indigo-500/20">
+                                <h6 class="text-indigo-500 font-bold mb-1">${label}</h6>
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-2xl font-bold text-slate-800 dark:text-zink-50">${minutes} min</span>
+                                    <span class="text-sm text-slate-500 dark:text-zink-200">(${distance} km)</span>
+                                </div>
                             </div>
-                        </div>
-                    `;
+                        `;
+                    }
                 }
-            }
-        })
-        .addTo(map);
+            })
+            .on('routingerror', function(e) {
+                console.warn('Routing error:', e);
+            })
+            .addTo(map);
     }
 
     if (window.Echo) {

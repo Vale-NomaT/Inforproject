@@ -266,21 +266,32 @@
 
     function updateRouting(driverLatLng) {
         if (!map) return;
+        // Safety check for routePoints
+        if (!window.routePoints || !window.routePoints.pickups || !window.routePoints.dropoffs) {
+            console.warn("Route points not initialized yet.");
+            return;
+        }
         
         const points = [];
-        if (driverLatLng) points.push(driverLatLng);
+        if (driverLatLng) {
+            points.push(L.latLng(parseFloat(driverLatLng.lat), parseFloat(driverLatLng.lng)));
+        }
         
         // Add Pickups then Dropoffs
         // We need to keep track of which point corresponds to which trip to update UI
         const orderedStops = [];
 
         window.routePoints.pickups.forEach(p => {
-            points.push(p.latLng);
-            orderedStops.push(p);
+            if (p.latLng) {
+                points.push(p.latLng);
+                orderedStops.push(p);
+            }
         });
         window.routePoints.dropoffs.forEach(p => {
-            points.push(p.latLng);
-            orderedStops.push(p);
+            if (p.latLng) {
+                points.push(p.latLng);
+                orderedStops.push(p);
+            }
         });
 
         if (points.length < 2) return;
@@ -289,89 +300,83 @@
             map.removeControl(routingControl);
         }
 
-        routingControl = L.Routing.control({
-            waypoints: points,
-            router: L.Routing.osrmv1({
-                serviceUrl: 'https://router.project-osrm.org/route/v1',
-                routingOptions: {
-                    alternatives: true
-                }
-            }),
-            lineOptions: {
-                styles: [{color: '#6366f1', opacity: 0.8, weight: 6}]
-            },
-            showAlternatives: true,
-            show: false, // Hide default itinerary text
-            addWaypoints: false,
-            draggableWaypoints: false,
-            fitSelectedRoutes: false,
-            createMarker: function() { return null; } 
-        })
-        .on('routesfound', function(e) {
-            const routes = e.routes;
-            if (!routes || routes.length === 0) return;
-
-            const route = routes[0];
-            const legs = route.legs; // Leg 0 is Driver -> 1st Stop
-
-            // Update UI with ETA
-            // orderedStops[i] corresponds to legs[i] (arrival at stop i)
-            // Note: points has Driver + Stops. So points[0] is Driver. points[1] is Stop 1.
-            // legs[0] is path from points[0] to points[1].
-            
-            let cumulativeTime = 0;
-            let cumulativeDistance = 0;
-
-            // Clear previous ETAs
-            document.querySelectorAll('.eta-display').forEach(el => el.innerHTML = '');
-
-            legs.forEach((leg, index) => {
-                if (index >= orderedStops.length) return;
-
-                const stop = orderedStops[index];
-                cumulativeTime += leg.summary.totalTime; // seconds
-                cumulativeDistance += leg.summary.totalDistance; // meters
-
-                // Update Trip Card
-                const tripCard = document.querySelector(`.card[data-trip-id="${stop.tripId}"]`);
-                if (tripCard) {
-                    // Create or find ETA container
-                    let etaContainer = tripCard.querySelector('.eta-info');
-                    if (!etaContainer) {
-                        const div = document.createElement('div');
-                        div.className = 'eta-info mt-2 pt-2 border-t border-slate-100 dark:border-zink-600 flex justify-between items-center text-sm';
-                        tripCard.querySelector('.card-body').appendChild(div);
-                        etaContainer = div;
+        try {
+            routingControl = L.Routing.control({
+                waypoints: points,
+                router: L.Routing.osrmv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1',
+                    routingOptions: {
+                        alternatives: true
                     }
+                }),
+                lineOptions: {
+                    styles: [{color: '#6366f1', opacity: 0.8, weight: 6}]
+                },
+                showAlternatives: true,
+                show: false, // Hide default itinerary text
+                addWaypoints: false,
+                draggableWaypoints: false,
+                fitSelectedRoutes: false,
+                createMarker: function() { return null; } 
+            })
+            .on('routesfound', function(e) {
+                const routes = e.routes;
+                if (!routes || routes.length === 0) return;
 
-                    const timeString = Math.round(cumulativeTime / 60) + ' min';
-                    const distString = (cumulativeDistance / 1000).toFixed(1) + ' km';
+                const route = routes[0];
+                const legs = route.legs; // Leg 0 is Driver -> 1st Stop
+                
+                let cumulativeTime = 0;
+                let cumulativeDistance = 0;
 
-                    // Determine label based on stop type
-                    const label = stop.type === 'pickup' ? 'Pickup in' : 'Dropoff in';
-                    
-                    // We might have multiple stops for same trip (Pickup AND Dropoff in list)
-                    // We should append or update specific fields. 
-                    // Let's use specific classes for pickup-eta and dropoff-eta if needed, 
-                    // but usually we care about the NEXT action.
-                    
-                    // If this is the FIRST time we see this trip in the loop, it's the Pickup (usually).
-                    // Actually, we processed Pickups then Dropoffs. 
-                    // So we will encounter the Pickup leg first, then the Dropoff leg later.
-                    
-                    // Let's create specific slots
-                    let specificSlot = etaContainer.querySelector(`.eta-${stop.type}`);
-                    if (!specificSlot) {
-                        specificSlot = document.createElement('span');
-                        specificSlot.className = `eta-${stop.type} px-2 py-1 rounded bg-slate-100 dark:bg-zink-600 text-slate-600 dark:text-zink-200`;
-                        etaContainer.appendChild(specificSlot);
-                    }
-                    
-                    specificSlot.innerHTML = `<b>${label}:</b> ${timeString} (${distString})`;
+                // Clear previous ETAs
+                document.querySelectorAll('.eta-display').forEach(el => el.innerHTML = '');
+
+                if (legs) {
+                    legs.forEach((leg, index) => {
+                        if (index >= orderedStops.length) return;
+
+                        const stop = orderedStops[index];
+                        cumulativeTime += leg.summary.totalTime; // seconds
+                        cumulativeDistance += leg.summary.totalDistance; // meters
+
+                        // Update Trip Card
+                        const tripCard = document.querySelector(`.card[data-trip-id="${stop.tripId}"]`);
+                        if (tripCard) {
+                            // Create or find ETA container
+                            let etaContainer = tripCard.querySelector('.eta-info');
+                            if (!etaContainer) {
+                                const div = document.createElement('div');
+                                div.className = 'eta-info mt-2 pt-2 border-t border-slate-100 dark:border-zink-600 flex justify-between items-center text-sm';
+                                tripCard.querySelector('.card-body').appendChild(div);
+                                etaContainer = div;
+                            }
+
+                            const timeString = Math.round(cumulativeTime / 60) + ' min';
+                            const distString = (cumulativeDistance / 1000).toFixed(1) + ' km';
+
+                            // Determine label based on stop type
+                            const label = stop.type === 'pickup' ? 'Pickup in' : 'Dropoff in';
+                            
+                            let specificSlot = etaContainer.querySelector(`.eta-${stop.type}`);
+                            if (!specificSlot) {
+                                specificSlot = document.createElement('span');
+                                specificSlot.className = `eta-${stop.type} px-2 py-1 rounded bg-slate-100 dark:bg-zink-600 text-slate-600 dark:text-zink-200`;
+                                etaContainer.appendChild(specificSlot);
+                            }
+
+                            specificSlot.innerHTML = `<b>${label}:</b> ${timeString} (${distString})`;
+                        }
+                    });
                 }
-            });
-        })
-        .addTo(map);
+            })
+            .on('routingerror', function(e) {
+                console.warn('Routing error:', e);
+            })
+            .addTo(map);
+        } catch (err) {
+            console.error("Failed to initialize routing control", err);
+        }
     }
 
     function showLocationError() {
