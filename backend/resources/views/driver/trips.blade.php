@@ -202,16 +202,16 @@
                                             @endphp
 
                                             <div class="mt-3 flex flex-wrap gap-2 justify-end">
-                                                <button type="button" @if($btn1Active) onclick="logEvent('{{ $trip->id }}', 'arrived')" @else disabled @endif class="{{ $btn1Class }}">
+                                                <button type="button" @if($btn1Active) onclick="logEvent(this, '{{ $trip->id }}', 'arrived')" @else disabled @endif class="{{ $btn1Class }}">
                                                     Arrived at Pickup
                                                 </button>
-                                                <button type="button" @if($btn2Active) onclick="logEvent('{{ $trip->id }}', 'picked_up')" @else disabled @endif class="{{ $btn2Class }}">
+                                                <button type="button" @if($btn2Active) onclick="logEvent(this, '{{ $trip->id }}', 'picked_up')" @else disabled @endif class="{{ $btn2Class }}">
                                                     Picked Up
                                                 </button>
-                                                <button type="button" @if($btn3Active) onclick="logEvent('{{ $trip->id }}', 'arrived_dropoff')" @else disabled @endif class="{{ $btn3Class }}">
+                                                <button type="button" @if($btn3Active) onclick="logEvent(this, '{{ $trip->id }}', 'arrived_dropoff')" @else disabled @endif class="{{ $btn3Class }}">
                                                     Arrived at Drop-off
                                                 </button>
-                                                <button type="button" @if($btn4Active) onclick="logEvent('{{ $trip->id }}', 'dropped_off')" @else disabled @endif class="{{ $btn4Class }}">
+                                                <button type="button" @if($btn4Active) onclick="logEvent(this, '{{ $trip->id }}', 'dropped_off')" @else disabled @endif class="{{ $btn4Class }}">
                                                     @if($isCompleted) <i data-lucide="check-double" class="w-4 h-4 inline-block mr-1"></i> @else <i data-lucide="check-circle" class="w-4 h-4 inline-block mr-1"></i> @endif Complete Trip
                                                 </button>
                                             </div>
@@ -590,7 +590,24 @@
         }
     }
 
-    function sendTripEvent(tripId, type, latitude, longitude) {
+    function setButtonLoading(btn) {
+        if (!btn) return;
+        btn.disabled = true;
+        btn.dataset.originalContent = btn.innerHTML;
+        // Use a simple spinner if lucide is not available or loader-2 is missing, but assume lucide works
+        btn.innerHTML = '<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing...';
+    }
+
+    function resetButton(btn) {
+        if (!btn) return;
+        btn.disabled = false;
+        if (btn.dataset.originalContent) {
+            btn.innerHTML = btn.dataset.originalContent;
+        }
+        if (window.lucide) window.lucide.createIcons();
+    }
+
+    function sendTripEvent(tripId, type, latitude, longitude, btn = null) {
         fetch(`/driver/trips/${tripId}/events`, {
             method: 'POST',
             headers: {
@@ -603,26 +620,37 @@
                 lng: longitude
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        })
         .then(data => {
             if (data.status === 'ok') {
                 window.location.reload();
+            } else {
+                throw new Error(data.message || 'Unknown error');
             }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to update trip status. Please try again.');
+            resetButton(btn);
+        });
     }
 
-    window.logEvent = function(tripId, type) {
+    window.logEvent = function(btn, tripId, type) {
+        setButtonLoading(btn);
+
         if (geoPermissionDenied || !navigator.geolocation) {
-            sendTripEvent(tripId, type, null, null);
+            sendTripEvent(tripId, type, null, null, btn);
             return;
         }
 
         navigator.geolocation.getCurrentPosition(position => {
             const { latitude, longitude } = position.coords;
-            sendTripEvent(tripId, type, latitude, longitude);
+            sendTripEvent(tripId, type, latitude, longitude, btn);
         }, error => {
-            sendTripEvent(tripId, type, null, null);
+            sendTripEvent(tripId, type, null, null, btn);
         });
     };
 
