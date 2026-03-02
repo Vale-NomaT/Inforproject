@@ -151,6 +151,9 @@ Route::middleware(['auth', 'role:driver'])->group(function () {
 
     Route::get('/driver/trips/completed', [DriverTripController::class, 'completed'])
         ->name('driver.trips.completed');
+    
+    Route::get('/driver/ratings', [App\Http\Controllers\DriverRatingController::class, 'index'])
+        ->name('driver.ratings.index');
 });
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
