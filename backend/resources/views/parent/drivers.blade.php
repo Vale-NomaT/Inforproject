@@ -171,7 +171,11 @@
                 // Disable button and update UI
                 if (btn) {
                     btn.disabled = true;
-                    btn.classList.add('opacity-75', 'cursor-not-allowed');
+                    // Remove interactive and color classes
+                    btn.classList.remove('bg-custom-500', 'border-custom-500', 'hover:bg-custom-600', 'hover:border-custom-600', 'hover:-translate-y-0.5', 'shadow-md', 'shadow-custom-500/20');
+                    // Add disabled styling (grey out)
+                    btn.classList.add('bg-slate-400', 'border-slate-400', 'cursor-not-allowed', 'opacity-100'); 
+                    
                     btn.innerHTML = `
                         <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
