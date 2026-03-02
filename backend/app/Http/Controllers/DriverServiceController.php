@@ -15,7 +15,7 @@ class DriverServiceController extends Controller
     /**
      * Show the form for editing the driver's service areas and schools.
      */
-    public function edit(): View
+    public function create(): View
     {
         $driverProfile = DriverProfile::with(['locations', 'schools'])->find(Auth::id());
         
@@ -33,7 +33,7 @@ class DriverServiceController extends Controller
     /**
      * Update the driver's service areas and schools.
      */
-    public function update(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse
     {
         $request->validate([
             'locations' => ['array'],
@@ -54,6 +54,6 @@ class DriverServiceController extends Controller
         // Sync schools
         $driverProfile->schools()->sync($request->input('schools', []));
 
-        return redirect()->route('driver.service.edit')->with('success', 'Service areas updated successfully.');
+        return redirect()->route('driver.service.create')->with('success', 'Service areas updated successfully.');
     }
 }

@@ -343,38 +343,77 @@
             .addTo(map);
     }
 
+    // Shared function to update driver position on map
+    let etaDebounce = null;
+    
+    function updateDriverPosition(lat, lng) {
+        if (!lat || !lng || Number.isNaN(lat) || Number.isNaN(lng)) return;
+        const newLatLng = L.latLng(lat, lng);
+
+        // Update Marker
+        if (!marker) {
+            marker = L.marker(newLatLng, {icon: carIcon}).addTo(map);
+            map.setView(newLatLng, 15); // Zoom in on first locate
+            
+            // Initial ETA update
+            updateEta(lat, lng);
+        } else {
+            const currentLatLng = marker.getLatLng();
+            // Only update if moved > 10 meters to reduce jitter and server load
+            if (currentLatLng.distanceTo(newLatLng) > 10) {
+                marker.setLatLng(newLatLng);
+                
+                // Update Path (throttled)
+                if (matchDebounce) clearTimeout(matchDebounce);
+                matchDebounce = setTimeout(() => {
+                    routeSegment(currentLatLng.lat, currentLatLng.lng, lat, lng);
+                }, 1000); // 1s debounce
+                
+                // Update ETA (Debounced 10s)
+                if (etaDebounce) clearTimeout(etaDebounce);
+                etaDebounce = setTimeout(() => {
+                    updateEta(lat, lng);
+                }, 10000);
+            }
+        }
+    }
+
+    // Polling Mechanism (Lightweight Cache)
+    const POLL_INTERVAL = 5000; // 5 seconds
+    const locationUrl = "{{ route('parent.trips.location', $trip) }}";
+    
+    async function fetchDriverLocation() {
+        try {
+            const response = await fetch(locationUrl, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data.status === 'ok' && data.lat && data.lng) {
+                    updateDriverPosition(parseFloat(data.lat), parseFloat(data.lng));
+                }
+            }
+        } catch (error) {
+            console.error('Location poll failed:', error);
+        }
+    }
+
+    // Start polling
+    fetchDriverLocation(); // Initial fetch
+    setInterval(fetchDriverLocation, POLL_INTERVAL);
+
     if (window.Echo) {
         window.Echo.private('trips.{{ $trip->id }}')
             .listen('.trip.location.updated', function (e) {
                 const lat = parseFloat(e.lat);
                 const lng = parseFloat(e.lng);
-
-                if (Number.isNaN(lat) || Number.isNaN(lng)) {
-                    return;
-                }
-
-                if (!marker) {
-                    marker = L.marker([lat, lng], {icon: carIcon}).addTo(map);
-                } else {
-                    marker.setLatLng([lat, lng]);
-                }
-
-                const last = marker ? marker.getLatLng() : null;
-                if (last) {
-                    if (matchDebounce) clearTimeout(matchDebounce);
-                    matchDebounce = setTimeout(() => {
-                        routeSegment(last.lat, last.lng, lat, lng);
-                    }, 600);
-                } else {
-                    pathLine = L.polyline([[lat, lng]], {color: '#2563eb', weight: 4}).addTo(map);
-                }
-
-                // Update ETA
-                updateEta(lat, lng);
-
-                // Keep map centered on driver if following
-                // map.setView([lat, lng], map.getZoom());
+                updateDriverPosition(lat, lng);
             });
+
 
         window.Echo.private('parents.{{ auth()->id() }}')
             .listen('.trip.event', function (e) {

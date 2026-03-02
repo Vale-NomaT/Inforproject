@@ -43,7 +43,7 @@ class DriverTripCompletionTest extends TestCase
             'status' => Trip::STATUS_IN_PROGRESS,
         ]);
 
-        $response = $this->actingAs($driver)->postJson(route('driver.trips.events', $trip), [
+        $response = $this->actingAs($driver)->postJson(route('driver.trips.events.store', $trip), [
             'type' => 'dropped_off',
             'lat' => 12.345678,
             'lng' => 98.765432,

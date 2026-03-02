@@ -39,7 +39,7 @@ class DriverTripEventsTest extends TestCase
         ]);
 
         // 1. Arrived at Pickup
-        $response = $this->actingAs($driver)->postJson(route('driver.trips.events', $trip), [
+        $response = $this->actingAs($driver)->postJson(route('driver.trips.events.store', $trip), [
             'type' => 'arrived',
             'lat' => -20.0,
             'lng' => 28.0,
@@ -60,7 +60,7 @@ class DriverTripEventsTest extends TestCase
         );
 
         // 2. Picked Up
-        $response = $this->actingAs($driver)->postJson(route('driver.trips.events', $trip), [
+        $response = $this->actingAs($driver)->postJson(route('driver.trips.events.store', $trip), [
             'type' => 'picked_up',
         ]);
         $response->assertStatus(200);
@@ -74,7 +74,7 @@ class DriverTripEventsTest extends TestCase
         );
 
         // 3. Dropped Off (Completes Trip)
-        $response = $this->actingAs($driver)->postJson(route('driver.trips.events', $trip), [
+        $response = $this->actingAs($driver)->postJson(route('driver.trips.events.store', $trip), [
             'type' => 'dropped_off',
         ]);
         $response->assertStatus(200);

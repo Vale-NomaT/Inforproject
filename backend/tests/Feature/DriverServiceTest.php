@@ -31,12 +31,12 @@ class DriverServiceTest extends TestCase
         $selectedLocations = $locations->take(2)->pluck('id')->toArray();
         $selectedSchools = $schools->take(1)->pluck('id')->toArray();
 
-        $response = $this->put(route('driver.service.update'), [
+        $response = $this->post(route('driver.service.store'), [
             'locations' => $selectedLocations,
             'schools' => $selectedSchools,
         ]);
 
-        $response->assertRedirect(route('driver.service.edit'));
+        $response->assertRedirect(route('driver.service.create'));
         $response->assertSessionHas('success');
 
         // Verify database
@@ -71,12 +71,12 @@ class DriverServiceTest extends TestCase
         // But here we explicitly send empty arrays or nothing to test controller logic
         
         // Case 1: Send empty arrays explicitly
-        $response = $this->put(route('driver.service.update'), [
+        $response = $this->post(route('driver.service.store'), [
             'locations' => [],
             'schools' => [],
         ]);
 
-        $response->assertRedirect(route('driver.service.edit'));
+        $response->assertRedirect(route('driver.service.create'));
         
         $driverProfile->refresh();
         $this->assertCount(0, $driverProfile->locations);
@@ -90,7 +90,7 @@ class DriverServiceTest extends TestCase
 
         $this->actingAs($user);
 
-        $response = $this->put(route('driver.service.update'), [
+        $response = $this->post(route('driver.service.store'), [
             'locations' => [9999], // Invalid ID
             'schools' => [9999],   // Invalid ID
         ]);

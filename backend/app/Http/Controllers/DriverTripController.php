@@ -210,6 +210,14 @@ class DriverTripController extends Controller
             ->get();
 
         foreach ($activeTrips as $trip) {
+            // Cache location for 5 minutes (lightweight, high performance)
+            // This allows parents to poll without hitting the DB
+            \Illuminate\Support\Facades\Cache::put("trip_location_{$trip->id}", [
+                'lat' => (float) $data['lat'],
+                'lng' => (float) $data['lng'],
+                'updated_at' => now()->timestamp
+            ], 300);
+
             try {
                 Event::dispatch(new TripLocationUpdated($trip, (float) $data['lat'], (float) $data['lng']));
             } catch (\Exception $e) {
@@ -233,6 +241,13 @@ class DriverTripController extends Controller
             'lat' => ['required', 'numeric'],
             'lng' => ['required', 'numeric'],
         ]);
+
+        // Cache location for 5 minutes
+        \Illuminate\Support\Facades\Cache::put("trip_location_{$trip->id}", [
+            'lat' => (float) $data['lat'],
+            'lng' => (float) $data['lng'],
+            'updated_at' => now()->timestamp
+        ], 300);
 
         try {
             Event::dispatch(new TripLocationUpdated($trip, (float) $data['lat'], (float) $data['lng']));

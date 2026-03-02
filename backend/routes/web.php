@@ -119,6 +119,9 @@ Route::middleware(['auth', 'role:parent'])->group(function () {
     Route::get('/parent/trips/{trip}', [ParentTripController::class, 'show'])
         ->name('parent.trips.show');
 
+    Route::get('/parent/trips/{trip}/location', [ParentTripController::class, 'location'])
+        ->name('parent.trips.location');
+
     Route::get('/parent/trips/{trip}/rate', [ParentRatingController::class, 'create'])
         ->name('parent.trips.rate.create');
 
@@ -143,8 +146,11 @@ Route::middleware(['auth', 'role:driver'])->group(function () {
     Route::get('/driver/bookings', [DriverBookingController::class, 'index'])
         ->name('driver.bookings.index');
 
-    Route::put('/driver/bookings/{booking}', [DriverBookingController::class, 'update'])
-        ->name('driver.bookings.update');
+    Route::post('/driver/bookings/{booking}/approve', [DriverBookingController::class, 'approve'])
+        ->name('driver.bookings.approve');
+
+    Route::post('/driver/bookings/{booking}/decline', [DriverBookingController::class, 'decline'])
+        ->name('driver.bookings.decline');
 
     Route::get('/driver/trips', [DriverTripController::class, 'index'])
         ->name('driver.trips.index');
@@ -174,6 +180,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
         
     Route::get('/admin/users', [AdminUserController::class, 'index'])
         ->name('admin.users.index');
+
+    Route::post('/admin/users/{user}/suspend', [AdminUserController::class, 'suspend'])
+        ->name('admin.users.suspend');
 
     Route::get('/admin/drivers/pending', [AdminDriverController::class, 'indexPending'])
         ->name('admin.drivers.pending');
