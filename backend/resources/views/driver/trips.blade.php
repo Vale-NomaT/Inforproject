@@ -40,6 +40,11 @@
                             <span class="text-xs text-slate-500 uppercase font-bold tracking-wider">ETA</span>
                             <span id="summary-time" class="font-bold text-slate-800 dark:text-white text-lg">0 min</span>
                         </div>
+                        <div class="w-px h-6 bg-slate-300 dark:bg-zinc-600"></div>
+                        <button id="voice-toggle" class="p-1 rounded-full hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors" onclick="toggleVoice()">
+                            <svg id="voice-on-icon" class="w-5 h-5 text-slate-700 dark:text-slate-200 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+                            <svg id="voice-off-icon" class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path></svg>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -177,8 +182,9 @@
     let stopMarkers = [];
     let routingControl = null;
     let lastDriverLatLng = null;
-    let lastSpokenInstruction = '';
     let lastBackendUpdate = 0;
+    let voiceEnabled = false;
+    let lastSpokenKey = ''; // Track unique instruction+distanceBucket combo
     
     // Car Icon Definition
     const carIcon = L.icon({
@@ -367,16 +373,34 @@
         return null;
     }
 
-    function speak(text) {
-        if ('speechSynthesis' in window) {
-            // Cancel current speaking to avoid queue buildup
+    function toggleVoice() {
+        voiceEnabled = !voiceEnabled;
+        const onIcon = document.getElementById('voice-on-icon');
+        const offIcon = document.getElementById('voice-off-icon');
+        const btn = document.getElementById('voice-toggle');
+        
+        if (voiceEnabled) {
+            onIcon.classList.remove('hidden');
+            offIcon.classList.add('hidden');
+            btn.classList.add('text-blue-600', 'bg-blue-50');
+            speak("Voice navigation started");
+        } else {
+            onIcon.classList.add('hidden');
+            offIcon.classList.remove('hidden');
+            btn.classList.remove('text-blue-600', 'bg-blue-50');
             window.speechSynthesis.cancel();
-            
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = 'en-US';
-            utterance.rate = 1.0;
-            window.speechSynthesis.speak(utterance);
         }
+    }
+
+    function speak(text) {
+        if (!voiceEnabled || !('speechSynthesis' in window)) return;
+        
+        window.speechSynthesis.cancel();
+        
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = 'en-US';
+        utterance.rate = 1.0;
+        window.speechSynthesis.speak(utterance);
     }
 
     function updateNavigation() {
@@ -431,20 +455,30 @@
 
                     const instructions = route.instructions;
                     if (instructions && instructions.length > 0) {
-                        // Get the first instruction (immediate action)
                         const nextInstruction = instructions[0];
-                        let text = '';
+                        const dist = nextInstruction.distance;
+                        const action = nextInstruction.text;
                         
-                        if (nextInstruction.distance < 100) {
-                             text = nextInstruction.text; // "Turn left onto Main St"
-                        } else {
-                             text = `In ${Math.round(nextInstruction.distance)} meters, ${nextInstruction.text.toLowerCase()}`;
-                        }
-
-                        // Avoid repeating the exact same instruction continuously
-                        if (text !== lastSpokenInstruction) {
-                            speak(text);
-                            lastSpokenInstruction = text;
+                        // Distance buckets for voice guidance
+                        let bucket = 'far';
+                        if (dist < 40) bucket = 'now';
+                        else if (dist < 200) bucket = 'soon';
+                        else if (dist < 600) bucket = 'approach';
+                        
+                        // Unique key for this instruction state
+                        const currentKey = `${action}|${bucket}`;
+                        
+                        if (currentKey !== lastSpokenKey && bucket !== 'far') {
+                            let textToSpeak = '';
+                            
+                            if (bucket === 'now') {
+                                textToSpeak = action; // e.g. "Turn right onto Main St"
+                            } else {
+                                textToSpeak = `In ${Math.round(dist)} meters, ${action}`;
+                            }
+                            
+                            speak(textToSpeak);
+                            lastSpokenKey = currentKey;
                         }
                     }
                 }
