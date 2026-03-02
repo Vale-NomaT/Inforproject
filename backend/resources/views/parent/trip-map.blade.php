@@ -134,7 +134,9 @@
     let marker = null;
     let pathLine = null;
     let routingControl = null;
+    let plannedRouteControl = null;
     let currentTarget = null; // {lat, lng, type}
+    let matchDebounce = null;
 
     @php
         $startLat = null;
@@ -196,6 +198,46 @@
         @endif
     @endif
 
+    // Draw planned road route (origin -> destination) using OSRM
+    (function drawInitialPlannedRoute() {
+        let destLat = null, destLng = null;
+        @if ($isMorning)
+            destLat = {{ $schoolLat }};
+            destLng = {{ $schoolLng }};
+        @else
+            destLat = {{ $homeLat }};
+            destLng = {{ $homeLng }};
+        @endif
+
+        if (!destLat || !destLng || !initialLat || !initialLng) return;
+
+        if (plannedRouteControl) {
+            map.removeControl(plannedRouteControl);
+        }
+
+        plannedRouteControl = L.Routing.control({
+            waypoints: [
+                L.latLng(initialLat, initialLng),
+                L.latLng(destLat, destLng)
+            ],
+            router: L.Routing.osrmv1({
+                serviceUrl: 'https://router.project-osrm.org/route/v1'
+            }),
+            lineOptions: {
+                styles: [{ color: '#2563eb', opacity: 0.8, weight: 5 }]
+            },
+            show: false,
+            addWaypoints: false,
+            draggableWaypoints: false,
+            fitSelectedRoutes: true,
+            createMarker: function() { return null; }
+        })
+        .on('routingerror', function(e) {
+            console.warn('Planned route error:', e);
+        })
+        .addTo(map);
+    })();
+
     @else
     map.setView([0, 0], 2);
     @endif
@@ -219,6 +261,32 @@
         map.fitBounds(pathLine.getBounds(), {padding: [24, 24]});
     }
 
+    async function snapPathToRoad(points) {
+        try {
+            if (!points || points.length < 2) return;
+            const coords = points.map(p => `${p[1]},${p[0]}`).join(';'); // lon,lat
+            const url = `https://router.project-osrm.org/match/v1/driving/${coords}?geometries=geojson&overview=full`;
+            const res = await fetch(url);
+            if (!res.ok) throw new Error('OSRM match failed');
+            const data = await res.json();
+            const geometry = (data.matchings && data.matchings[0] && data.matchings[0].geometry && data.matchings[0].geometry.coordinates) || null;
+            if (!geometry) return;
+            const latlngs = geometry.map(([lon, lat]) => [lat, lon]);
+            if (pathLine) {
+                pathLine.setLatLngs(latlngs);
+            } else {
+                pathLine = L.polyline(latlngs, {color: '#2563eb', weight: 4}).addTo(map);
+            }
+        } catch (err) {
+            console.warn('Road snapping failed, using raw path:', err);
+            if (pathLine) {
+                pathLine.setLatLngs(points);
+            } else {
+                pathLine = L.polyline(points, {color: '#2563eb', weight: 4}).addTo(map);
+            }
+        }
+    }
+
     function updateEta(driverLat, driverLng) {
         if (!currentTarget || !driverLat || !driverLng) return;
 
@@ -238,7 +306,7 @@
                 serviceUrl: 'https://router.project-osrm.org/route/v1'
             }),
             lineOptions: {
-                styles: [{color: '#10b981', opacity: 0.6, weight: 4, dashArray: '10, 10'}] // Dashed green line for projected route
+                styles: [{color: '#10b981', opacity: 0.7, weight: 4}]
             },
             show: false,
             addWaypoints: false,
@@ -295,7 +363,11 @@
                 if (pathLine) {
                     const existing = pathLine.getLatLngs();
                     existing.push([lat, lng]);
-                    pathLine.setLatLngs(existing);
+                    // debounce road snapping to avoid excessive calls
+                    if (matchDebounce) clearTimeout(matchDebounce);
+                    matchDebounce = setTimeout(() => {
+                        snapPathToRoad(existing.map(p => [p.lat, p.lng]));
+                    }, 800);
                 } else {
                     pathLine = L.polyline([[lat, lng]], {color: '#2563eb', weight: 4}).addTo(map);
                 }
