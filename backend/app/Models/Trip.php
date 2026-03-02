@@ -26,11 +26,15 @@ class Trip extends Model
         'type',
         'distance_km',
         'pricing_tier',
+        'completed_at',
+        'is_on_time',
     ];
 
     protected $casts = [
         'scheduled_date' => 'date',
         'distance_km' => 'float',
+        'completed_at' => 'datetime',
+        'is_on_time' => 'boolean',
     ];
 
     public function driver(): BelongsTo

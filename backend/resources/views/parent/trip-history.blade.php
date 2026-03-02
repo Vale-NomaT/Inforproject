@@ -11,6 +11,12 @@
     </div>
 </div>
 
+@if ($errors->any())
+    <div class="mb-4 px-4 py-3 rounded-md border border-red-200 bg-red-50 text-red-700">
+        {{ $errors->first() }}
+    </div>
+@endif
+
 @if ($child->school)
     <div class="mb-5">
         <p class="text-slate-500 dark:text-zink-200">
@@ -76,7 +82,7 @@
                             <a href="{{ route('parent.trips.show', ['trip' => $trip->id]) }}" class="text-white btn bg-custom-500 border-custom-500 hover:text-white hover:bg-custom-600 hover:border-custom-600 focus:text-white focus:bg-custom-600 focus:border-custom-600 focus:ring focus:ring-custom-100 active:text-white active:bg-custom-600 active:border-custom-600 active:ring active:ring-custom-100 dark:ring-custom-400/20 text-xs">
                                 View Timeline
                             </a>
-                            @if (! $rating)
+                            @if (! $rating && (($trip->completed_at ?? $trip->updated_at)->diffInHours(now()) <= 24))
                                 <a href="{{ route('parent.trips.rate.create', ['trip' => $trip->id]) }}" class="text-white btn bg-yellow-500 border-yellow-500 hover:text-white hover:bg-yellow-600 hover:border-yellow-600 focus:text-white focus:bg-yellow-600 focus:border-yellow-600 focus:ring focus:ring-yellow-100 active:text-white active:bg-yellow-600 active:border-yellow-600 active:ring active:ring-yellow-100 dark:ring-yellow-400/20 text-xs">
                                     Rate Driver
                                 </a>

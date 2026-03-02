@@ -261,29 +261,20 @@
         map.fitBounds(pathLine.getBounds(), {padding: [24, 24]});
     }
 
-    async function snapPathToRoad(points) {
-        try {
-            if (!points || points.length < 2) return;
-            const coords = points.map(p => `${p[1]},${p[0]}`).join(';'); // lon,lat
-            const url = `https://router.project-osrm.org/match/v1/driving/${coords}?geometries=geojson&overview=full`;
-            const res = await fetch(url);
-            if (!res.ok) throw new Error('OSRM match failed');
-            const data = await res.json();
-            const geometry = (data.matchings && data.matchings[0] && data.matchings[0].geometry && data.matchings[0].geometry.coordinates) || null;
-            if (!geometry) return;
-            const latlngs = geometry.map(([lon, lat]) => [lat, lon]);
-            if (pathLine) {
-                pathLine.setLatLngs(latlngs);
-            } else {
-                pathLine = L.polyline(latlngs, {color: '#2563eb', weight: 4}).addTo(map);
-            }
-        } catch (err) {
-            console.warn('Road snapping failed, using raw path:', err);
-            if (pathLine) {
-                pathLine.setLatLngs(points);
-            } else {
-                pathLine = L.polyline(points, {color: '#2563eb', weight: 4}).addTo(map);
-            }
+    async function routeSegment(prevLat, prevLng, lat, lng) {
+        if ([prevLat, prevLng, lat, lng].some(v => v === null || Number.isNaN(v))) return;
+        const url = `https://router.project-osrm.org/route/v1/driving/${prevLng},${prevLat};${lng},${lat}?geometries=geojson&overview=full`;
+        const res = await fetch(url);
+        if (!res.ok) return;
+        const data = await res.json();
+        const geometry = data && data.routes && data.routes[0] && data.routes[0].geometry && data.routes[0].geometry.coordinates ? data.routes[0].geometry.coordinates : null;
+        if (!geometry) return;
+        const seg = geometry.map(([lon, la]) => [la, lon]);
+        if (pathLine) {
+            const existing = pathLine.getLatLngs();
+            pathLine.setLatLngs(existing.concat(seg));
+        } else {
+            pathLine = L.polyline(seg, {color: '#2563eb', weight: 4}).addTo(map);
         }
     }
 
@@ -360,14 +351,12 @@
                     marker.setLatLng([lat, lng]);
                 }
 
-                if (pathLine) {
-                    const existing = pathLine.getLatLngs();
-                    existing.push([lat, lng]);
-                    // debounce road snapping to avoid excessive calls
+                const last = marker ? marker.getLatLng() : null;
+                if (last) {
                     if (matchDebounce) clearTimeout(matchDebounce);
                     matchDebounce = setTimeout(() => {
-                        snapPathToRoad(existing.map(p => [p.lat, p.lng]));
-                    }, 800);
+                        routeSegment(last.lat, last.lng, lat, lng);
+                    }, 600);
                 } else {
                     pathLine = L.polyline([[lat, lng]], {color: '#2563eb', weight: 4}).addTo(map);
                 }

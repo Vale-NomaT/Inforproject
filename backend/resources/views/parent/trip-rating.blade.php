@@ -13,6 +13,12 @@
 
 <div class="card max-w-xl mx-auto">
     <div class="card-body">
+        @if ($errors->any())
+            <div class="mb-4 px-4 py-3 rounded-md border border-red-200 bg-red-50 text-red-700">
+                {{ $errors->first() }}
+            </div>
+        @endif
+
         <div class="mb-4 text-sm text-slate-700 dark:text-zink-100">
             <p>
                 Trip date: <span class="font-medium text-slate-900 dark:text-zink-50">{{ $trip->scheduled_date->format('Y-m-d') }}</span>
@@ -27,14 +33,20 @@
                 <select id="rating" name="rating" class="form-select border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200" required>
                     <option value="">Select a rating</option>
                     @for ($i = 5; $i >= 1; $i--)
-                        <option value="{{ $i }}">{{ $i }} star{{ $i === 1 ? '' : 's' }}</option>
+                        <option value="{{ $i }}" @selected((int) old('rating') === $i)>{{ $i }} star{{ $i === 1 ? '' : 's' }}</option>
                     @endfor
                 </select>
+                @error('rating')
+                    <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                @enderror
             </div>
 
             <div>
-                <label for="comment" class="block text-sm font-medium text-slate-800 dark:text-zink-100 mb-2">Additional feedback (optional)</label>
-                <textarea id="comment" name="comment" rows="4" class="form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200" placeholder="Share anything that would help us keep rides safe and smooth.">{{ old('comment') }}</textarea>
+                <label for="comment" class="block text-sm font-medium text-slate-800 dark:text-zink-100 mb-2">Additional feedback (optional, max 300 characters)</label>
+                <textarea id="comment" name="comment" rows="4" maxlength="300" class="form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200" placeholder="Share anything that would help us keep rides safe and smooth.">{{ old('comment') }}</textarea>
+                @error('comment')
+                    <p class="mt-1 text-sm text-red-500">{{ $message }}</p>
+                @enderror
             </div>
 
             <div class="pt-2">

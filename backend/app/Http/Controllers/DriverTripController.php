@@ -8,6 +8,7 @@ use App\Models\Trip;
 use App\Models\TripEvent;
 use App\Models\User;
 use App\Notifications\TripUpdateNotification;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -215,6 +216,8 @@ class DriverTripController extends Controller
 
         if ($data['type'] === 'dropped_off') {
             $trip->status = Trip::STATUS_COMPLETED;
+            $trip->completed_at = $event->created_at;
+            $trip->is_on_time = $this->calculateIsOnTime($trip, $event);
             $trip->save();
         }
 
@@ -233,6 +236,37 @@ class DriverTripController extends Controller
         return response()->json([
             'status' => 'ok',
         ]);
+    }
+
+    private function calculateIsOnTime(Trip $trip, TripEvent $dropOffEvent): ?bool
+    {
+        $trip->loadMissing('child');
+        $child = $trip->child;
+
+        if (! $child || ! $trip->scheduled_date) {
+            return null;
+        }
+
+        if ($trip->type === Trip::TYPE_MORNING && $child->school_start_time) {
+            $expected = Carbon::parse($trip->scheduled_date->toDateString().' '.$child->school_start_time);
+
+            return $dropOffEvent->created_at?->lte($expected);
+        }
+
+        if ($trip->type === Trip::TYPE_AFTERNOON && $child->school_end_time) {
+            $expected = Carbon::parse($trip->scheduled_date->toDateString().' '.$child->school_end_time);
+
+            $pickedUpEvent = TripEvent::where('trip_id', $trip->id)
+                ->where('type', 'picked_up')
+                ->orderByDesc('created_at')
+                ->first();
+
+            $actual = $pickedUpEvent?->created_at ?? $dropOffEvent->created_at;
+
+            return $actual?->lte($expected);
+        }
+
+        return null;
     }
 
     protected function notifyParent(Trip $trip, string $message): void

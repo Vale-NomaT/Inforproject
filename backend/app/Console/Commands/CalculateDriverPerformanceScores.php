@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Models\DriverPerformanceScore;
 use App\Models\Rating;
 use App\Models\Trip;
-use App\Models\TripEvent;
 use App\Models\User;
 use Illuminate\Console\Command;
 
@@ -13,7 +12,7 @@ class CalculateDriverPerformanceScores extends Command
 {
     protected $signature = 'scores:calculate-driver-performance';
 
-    protected $description = 'Calculate performance scores for drivers based on ratings and trips';
+    protected $description = 'Calculate driver performance score (DPS) from rating, reliability, and punctuality';
 
     public function handle(): int
     {
@@ -22,33 +21,27 @@ class CalculateDriverPerformanceScores extends Command
         $this->info("Found {$drivers->count()} drivers to process.");
 
         foreach ($drivers as $driver) {
-            $tripQuery = Trip::where('driver_id', $driver->id);
+            $assignedTrips = Trip::where('driver_id', $driver->id)->count();
+            $completedTrips = Trip::where('driver_id', $driver->id)
+                ->where('status', Trip::STATUS_COMPLETED)
+                ->count();
 
-            $assignedTrips = $tripQuery->count();
-            $completedTrips = (clone $tripQuery)->where('status', Trip::STATUS_COMPLETED)->count();
+            $avgRating = (float) (Rating::where('driver_id', $driver->id)->avg('rating') ?? 0);
 
-            $avgRating = Rating::where('driver_id', $driver->id)->avg('rating') ?: 0.0;
+            $reliability = $assignedTrips > 0 ? ($completedTrips / $assignedTrips) : 0.0;
 
-            $reliability = $assignedTrips > 0 ? $completedTrips / $assignedTrips : 0.0;
+            $onTimeTrips = Trip::where('driver_id', $driver->id)
+                ->where('status', Trip::STATUS_COMPLETED)
+                ->where('is_on_time', true)
+                ->count();
 
-            $tripIds = $tripQuery->pluck('id');
+            $punctuality = $completedTrips > 0 ? ($onTimeTrips / $completedTrips) : 0.0;
 
-            $tripsWithArrival = 0;
-
-            if ($tripIds->isNotEmpty()) {
-                $tripsWithArrival = TripEvent::whereIn('trip_id', $tripIds)
-                    ->where('type', 'arrived')
-                    ->distinct('trip_id')
-                    ->count('trip_id');
-            }
-
-            $punctuality = $assignedTrips > 0 ? $tripsWithArrival / $assignedTrips : 0.0;
-
-            $normalizedRating = $avgRating > 0 ? $avgRating / 5.0 : 0.0;
-
-            $scoreFraction = (0.6 * $normalizedRating) + (0.2 * $reliability) + (0.2 * $punctuality);
-
-            $score = round($scoreFraction * 100, 2);
+            $normalizedRating = ($avgRating / 5) * 100;
+            $score = ($normalizedRating * 0.6)
+                + (($reliability * 100) * 0.2)
+                + (($punctuality * 100) * 0.2);
+            $score = round($score, 2);
 
             DriverPerformanceScore::updateOrCreate(
                 [
@@ -63,7 +56,7 @@ class CalculateDriverPerformanceScores extends Command
                 ]
             );
             
-            $this->info("Updated score for driver ID {$driver->id}: {$score}");
+            $this->info("Updated score for driver ID {$driver->id}: ".number_format($score, 2));
         }
 
         $this->info('Driver performance score calculation completed.');

@@ -55,6 +55,47 @@
                 </div>
             </div>
 
+            <div class="card">
+                <div class="card-body">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-base sm:text-lg font-semibold text-slate-900 dark:text-zink-50">
+                            Ratings & Performance
+                        </h2>
+                    </div>
+
+                    @if (! $performance)
+                        <p class="text-slate-500 dark:text-zink-200">No performance data yet.</p>
+                    @else
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="text-sm text-slate-500 dark:text-zink-200">DPS</p>
+                                <p class="text-2xl font-semibold text-slate-900 dark:text-zink-50">
+                                    {{ number_format((float) $performance->score, 2) }}
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-slate-500 dark:text-zink-200">Average Rating</p>
+                                <p class="text-2xl font-semibold text-slate-900 dark:text-zink-50">
+                                    {{ number_format((float) $performance->avg_rating, 2) }} / 5
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-slate-500 dark:text-zink-200">Reliability</p>
+                                <p class="text-lg font-semibold text-slate-900 dark:text-zink-50">
+                                    {{ number_format(((float) $performance->reliability) * 100, 1) }}%
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-sm text-slate-500 dark:text-zink-200">Punctuality</p>
+                                <p class="text-lg font-semibold text-slate-900 dark:text-zink-50">
+                                    {{ number_format(((float) $performance->punctuality) * 100, 1) }}%
+                                </p>
+                            </div>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
             <a
                 href="{{ route('driver.bookings.index') }}"
                 class="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm hover:border-blue-500 hover:shadow-md transition dark:bg-zink-700 dark:border-zink-500 relative"

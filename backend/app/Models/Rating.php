@@ -9,6 +9,7 @@ class Rating extends Model
 {
     protected $fillable = [
         'trip_id',
+        'child_id',
         'driver_id',
         'parent_id',
         'rating',
@@ -18,6 +19,11 @@ class Rating extends Model
     public function trip(): BelongsTo
     {
         return $this->belongsTo(Trip::class, 'trip_id');
+    }
+
+    public function child(): BelongsTo
+    {
+        return $this->belongsTo(Child::class, 'child_id');
     }
 
     public function driver(): BelongsTo

@@ -7,6 +7,7 @@ use Illuminate\View\View;
 use Illuminate\Support\Facades\Auth;
 use App\Models\Trip;
 use App\Models\BookingRequest;
+use App\Models\DriverPerformanceScore;
 
 class DriverDashboardController extends Controller
 {
@@ -23,6 +24,8 @@ class DriverDashboardController extends Controller
             ->where('status', BookingRequest::STATUS_PENDING)
             ->count();
 
-        return view('dashboard.driver', compact('trips', 'pendingBookingsCount'));
+        $performance = DriverPerformanceScore::where('driver_id', $driverId)->first();
+
+        return view('dashboard.driver', compact('trips', 'pendingBookingsCount', 'performance'));
     }
 }
