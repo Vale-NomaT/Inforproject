@@ -135,7 +135,7 @@
                                     </div>
                                 </div>
 
-                                <form method="POST" action="{{ route('parent.children.drivers.store', ['child' => $child->id]) }}" class="mt-auto">
+                                <form method="POST" action="{{ route('parent.children.drivers.store', ['child' => $child->id]) }}" class="mt-auto" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').innerHTML = 'Requesting...';">
                                     @csrf
                                     <input type="hidden" name="driver_id" value="{{ $driver->id }}">
                                     <button type="submit" class="w-full flex items-center justify-center gap-2 btn bg-custom-500 border-custom-500 hover:bg-custom-600 hover:border-custom-600 text-white shadow-md shadow-custom-500/20 py-2.5 font-medium transition-all hover:-translate-y-0.5">

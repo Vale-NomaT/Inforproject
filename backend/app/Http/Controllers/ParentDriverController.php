@@ -11,6 +11,8 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
+use Illuminate\Support\Facades\DB;
+
 class ParentDriverController extends Controller
 {
     protected EligibleDriverService $eligibleDriverService;
@@ -58,14 +60,21 @@ class ParentDriverController extends Controller
             abort(403);
         }
 
-        $booking = BookingRequest::where('parent_id', $request->user()->id)
-            ->where('driver_id', $driverId)
-            ->where('child_id', $child->id)
-            ->where('status', BookingRequest::STATUS_PENDING)
-            ->first();
+        $booking = DB::transaction(function () use ($request, $driverId, $child, $selectedEntry) {
+            // Lock the child record to prevent race conditions
+            Child::where('id', $child->id)->lockForUpdate()->first();
 
-        if (! $booking) {
-            $booking = BookingRequest::create([
+            $existingBooking = BookingRequest::where('parent_id', $request->user()->id)
+                ->where('driver_id', $driverId)
+                ->where('child_id', $child->id)
+                ->where('status', BookingRequest::STATUS_PENDING)
+                ->first();
+
+            if ($existingBooking) {
+                return $existingBooking;
+            }
+
+            return BookingRequest::create([
                 'parent_id' => $request->user()->id,
                 'driver_id' => $driverId,
                 'child_id' => $child->id,
@@ -73,18 +82,21 @@ class ParentDriverController extends Controller
                 'pricing_tier' => $selectedEntry['tier'],
                 'created_at' => now(),
             ]);
-        }
+        });
 
-        $driverUser = User::where('id', $driverId)
-            ->where('user_type', 'driver')
-            ->first();
+        // Only notify if it was a newly created booking (check wasRecentlyCreated)
+        if ($booking->wasRecentlyCreated) {
+            $driverUser = User::where('id', $driverId)
+                ->where('user_type', 'driver')
+                ->first();
 
-        if ($driverUser) {
-            $driverUser->notify(new NewBookingNotification(
-                $request->user()->name,
-                $child->first_name . ' ' . $child->last_name,
-                $booking->id
-            ));
+            if ($driverUser) {
+                $driverUser->notify(new NewBookingNotification(
+                    $request->user()->name,
+                    $child->first_name . ' ' . $child->last_name,
+                    $booking->id
+                ));
+            }
         }
 
         return back()->with('status', 'Request sent! Awaiting driver confirmation.');
