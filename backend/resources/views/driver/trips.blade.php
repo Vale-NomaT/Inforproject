@@ -25,9 +25,22 @@
 
         @if (!empty($runs) && count($runs) > 0)
             <div class="card mb-5">
-                <div class="card-body">
+                <div class="card-body relative">
                     <h6 class="mb-3 text-sm font-semibold text-slate-900 dark:text-zink-50">Today's Route Map</h6>
                     <div id="driver-route-map" class="h-[420px] md:h-[520px] rounded-xl w-full z-0"></div>
+                    
+                    <!-- Route Summary Overlay -->
+                    <div id="route-summary" class="absolute top-14 left-1/2 transform -translate-x-1/2 z-[400] bg-white/90 dark:bg-zinc-800/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg border border-zinc-200 dark:border-zinc-700 hidden flex items-center gap-4 transition-all duration-300">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-slate-500 uppercase font-bold tracking-wider">Dist</span>
+                            <span id="summary-dist" class="font-bold text-slate-800 dark:text-white text-lg">0 km</span>
+                        </div>
+                        <div class="w-px h-6 bg-slate-300 dark:bg-zinc-600"></div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-slate-500 uppercase font-bold tracking-wider">ETA</span>
+                            <span id="summary-time" class="font-bold text-slate-800 dark:text-white text-lg">0 min</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         @endif
@@ -398,7 +411,25 @@
             .on('routesfound', function(e) {
                 const routes = e.routes;
                 if (routes && routes.length > 0) {
-                    const instructions = routes[0].instructions;
+                    const route = routes[0];
+                    const summary = route.summary;
+                    
+                    // Update overlay
+                    const summaryEl = document.getElementById('route-summary');
+                    const distEl = document.getElementById('summary-dist');
+                    const timeEl = document.getElementById('summary-time');
+                    
+                    if (summaryEl && distEl && timeEl) {
+                        const distKm = (summary.totalDistance / 1000).toFixed(1);
+                        const timeMin = Math.round(summary.totalTime / 60);
+                        
+                        distEl.textContent = `${distKm} km`;
+                        timeEl.textContent = `${timeMin} min`;
+                        summaryEl.classList.remove('hidden');
+                        summaryEl.classList.add('flex');
+                    }
+
+                    const instructions = route.instructions;
                     if (instructions && instructions.length > 0) {
                         // Get the first instruction (immediate action)
                         const nextInstruction = instructions[0];

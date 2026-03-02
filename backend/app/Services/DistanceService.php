@@ -27,45 +27,81 @@ class DistanceService
 
         $apiKey = Config::get('services.openrouteservice.key');
 
-        if (! $apiKey) {
-            throw new RuntimeException('OpenRouteService API key is not configured.');
+        // Try OpenRouteService if key is present
+        if ($apiKey) {
+            try {
+                $response = Http::timeout(5)->withHeaders([
+                    'Authorization' => $apiKey,
+                    'Accept' => 'application/json',
+                    'Content-Type' => 'application/json',
+                ])->post('https://api.openrouteservice.org/v2/directions/driving-car', [
+                    'coordinates' => [
+                        [(float) $location->lng, (float) $location->lat],
+                        [(float) $school->lng, (float) $school->lat],
+                    ],
+                ]);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    $distanceMeters = $data['features'][0]['properties']['summary']['distance'] ?? null;
+
+                    if (is_numeric($distanceMeters)) {
+                        return $this->storeAndReturnDistance($location, $school, $distanceMeters);
+                    }
+                }
+            } catch (\Exception $e) {
+                // ORS failed, proceed to fallback
+            }
         }
 
-        $response = Http::withHeaders([
-            'Authorization' => $apiKey,
-            'Accept' => 'application/json',
-            'Content-Type' => 'application/json',
-        ])->post('https://api.openrouteservice.org/v2/directions/driving-car', [
-            'coordinates' => [
-                [(float) $location->lng, (float) $location->lat],
-                [(float) $school->lng, (float) $school->lat],
-            ],
-        ]);
+        // Fallback: OSRM (Open Source Routing Machine) Public API
+        // No API key required for the public demo server, but rate limited.
+        // Great for fallback when ORS key is missing or invalid.
+        try {
+            // OSRM format: {lon},{lat};{lon},{lat}
+            $url = "http://router.project-osrm.org/route/v1/driving/{$location->lng},{$location->lat};{$school->lng},{$school->lat}?overview=false";
+            
+            $response = Http::timeout(5)->get($url);
 
-        if ($response->failed()) {
-            throw new RuntimeException('Failed to contact routing service.');
+            if ($response->successful()) {
+                $data = $response->json();
+                // OSRM returns distance in meters in routes[0].distance
+                $distanceMeters = $data['routes'][0]['distance'] ?? null;
+
+                if (is_numeric($distanceMeters)) {
+                    return $this->storeAndReturnDistance($location, $school, $distanceMeters);
+                }
+            }
+        } catch (\Exception $e) {
+            // OSRM failed
         }
 
-        $data = $response->json();
+        throw new RuntimeException('Unable to calculate driving distance via any routing service.');
+    }
 
-        $distanceMeters = $data['features'][0]['properties']['summary']['distance'] ?? null;
+    /**
+     * Helper to store distance and return round trip km
+     */
+    protected function storeAndReturnDistance(Location $location, School $school, float $distanceMeters): float
+    {
+        $oneWayKm = $distanceMeters / 1000;
 
-        if (! is_numeric($distanceMeters)) {
-            throw new RuntimeException('Invalid routing response.');
+        try {
+            RouteDistance::updateOrCreate(
+                [
+                    'location_id' => $location->id,
+                    'school_id' => $school->id,
+                ],
+                [
+                    'one_way_distance_km' => $oneWayKm,
+                    'last_calculated' => now(),
+                ]
+            );
+        } catch (\Exception $e) {
+            // If caching fails (e.g. FK constraint, DB issue), 
+            // we should still return the calculated distance.
+            // \Log::error('Failed to cache route distance: ' . $e->getMessage());
         }
-
-        $oneWayKm = ((float) $distanceMeters) / 1000;
-
-        RouteDistance::updateOrCreate(
-            [
-                'location_id' => $location->id,
-                'school_id' => $school->id,
-            ],
-            [
-                'one_way_distance_km' => $oneWayKm,
-                'last_calculated' => now(),
-            ]
-        );
 
         return $oneWayKm * 2;
     }
