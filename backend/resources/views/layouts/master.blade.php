@@ -15,6 +15,8 @@
     <link rel="stylesheet" href="{{ asset('assets/css/saferide.css') }}">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
+
+
     <script src="{{ asset('assets/libs/%40popperjs/core/umd/popper.min.js') }}"></script>
     <script src="{{ asset('assets/js/common.js') }}"></script>
     
@@ -114,20 +116,7 @@
                                     </div>
                                     <div data-simplebar="" class="max-h-[350px]">
                                         <div class="flex flex-col gap-1" id="notification-list">
-                                            @if (session('status'))
-                                                <div class="flex items-start gap-3 p-4 hover:bg-slate-50 dark:hover:bg-zink-500/40">
-                                                    <div class="shrink-0">
-                                                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-400">
-                                                            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-                                                        </span>
-                                                    </div>
-                                                    <div class="flex-1">
-                                                        <p class="text-sm font-medium text-slate-900 dark:text-zink-50">
-                                                            {{ session('status') }}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            @endif
+
 
                                             @auth
                                                 @forelse(auth()->user()->unreadNotifications as $notification)
@@ -486,27 +475,51 @@
     <!-- App js -->
     <script src="{{ asset('assets/js/app.js') }}"></script>
 
-    @if (session('status'))
-        <button
-            type="button"
-            id="global-flash-toast"
-            data-toast
-            data-toast-text="{{ session('status') }}"
-            data-toast-gravity="top"
-            data-toast-position="right"
-            data-toast-className="bg-emerald-500 text-white"
-            data-toast-duration="4000"
-            data-toast-close="true"
-            class="hidden"
-        ></button>
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                var el = document.getElementById('global-flash-toast');
-                if (el && typeof el.click === 'function') {
-                    el.click();
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 3000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
                 }
             });
-        </script>
-    @endif
+
+            @if(session('success'))
+                Toast.fire({
+                    icon: 'success',
+                    title: "{{ session('success') }}"
+                });
+            @endif
+
+            @if(session('error'))
+                Toast.fire({
+                    icon: 'error',
+                    title: "{{ session('error') }}"
+                });
+            @endif
+
+            @if(session('status'))
+                Toast.fire({
+                    icon: 'info',
+                    title: "{{ session('status') }}"
+                });
+            @endif
+
+            @if($errors->any())
+                Toast.fire({
+                    icon: 'error',
+                    title: "{{ $errors->first() }}"
+                });
+            @endif
+        });
+    </script>
+
     @yield('script')
 </body>

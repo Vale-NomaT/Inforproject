@@ -126,6 +126,9 @@ Route::middleware(['auth', 'role:driver'])->group(function () {
     Route::get('/driver/trips/history', [DriverTripController::class, 'history'])
         ->name('driver.trips.history');
 
+    Route::get('/driver/ratings', [App\Http\Controllers\DriverRatingController::class, 'index'])
+        ->name('driver.ratings.index');
+
     Route::get('/driver/service-area', [DriverServiceController::class, 'edit'])
         ->name('driver.service.edit');
 

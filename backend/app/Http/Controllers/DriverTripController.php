@@ -110,7 +110,9 @@ class DriverTripController extends Controller
 
         Event::dispatch(new TripEventBroadcasted($event));
 
-        $this->notifyParent($trip, 'Driver has started the trip.');
+        $etaMins = $trip->distance_km ? ceil($trip->distance_km * 2) : null; // Approx 30km/h
+        $etaMsg = $etaMins ? " ETA: ~{$etaMins} mins." : "";
+        $this->notifyParent($trip, 'Driver has started the trip and is en route.' . $etaMsg);
 
         return back()->with('status', 'Trip started. Tracking is now active.');
     }
@@ -145,7 +147,9 @@ class DriverTripController extends Controller
 
             Event::dispatch(new TripEventBroadcasted($event));
 
-            $this->notifyParent($trip, 'Driver has started the trip.');
+            $etaMins = $trip->distance_km ? ceil($trip->distance_km * 2) : null;
+            $etaMsg = $etaMins ? " ETA: ~{$etaMins} mins." : "";
+            $this->notifyParent($trip, 'Driver has started the trip and is en route.' . $etaMsg);
         }
 
         return back()->with('status', 'Route started. Tracking is now active.');
@@ -226,11 +230,11 @@ class DriverTripController extends Controller
         if ($data['type'] === 'arrived') {
             $this->notifyParent($trip, 'Driver has arrived at the pickup location.');
         } elseif ($data['type'] === 'picked_up') {
-            $this->notifyParent($trip, 'Your child has been picked up.');
+            $this->notifyParent($trip, 'Your child has been picked up and is en route to the destination.');
         } elseif ($data['type'] === 'arrived_dropoff') {
             $this->notifyParent($trip, 'Driver has arrived at the drop-off location.');
         } elseif ($data['type'] === 'dropped_off') {
-            $this->notifyParent($trip, 'Your child has been dropped off.');
+            $this->notifyParent($trip, 'Your child has been dropped off safely.');
         }
 
         return response()->json([

@@ -27,11 +27,7 @@
             </div>
         </div>
 
-        @if (session('status'))
-            <div class="px-4 py-3 mb-5 text-sm text-green-500 border border-green-200 rounded-md bg-green-50 dark:bg-green-400/20 dark:border-green-500/50 flex items-center">
-                <i data-lucide="check-circle" class="w-4 h-4 mr-2"></i> {{ session('status') }}
-            </div>
-        @endif
+
 
         <!-- Pending Requests Section -->
         <div class="mb-8">

@@ -17,11 +17,7 @@
             </ul>
         </div>
 
-        @if (session('success'))
-            <div class="mb-4 p-4 text-green-700 bg-green-100 rounded-md border border-green-200 dark:bg-green-500/20 dark:text-green-500 dark:border-green-500/20">
-                {{ session('success') }}
-            </div>
-        @endif
+
 
         <div class="card">
             <div class="card-body">

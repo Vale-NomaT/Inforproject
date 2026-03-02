@@ -1,4 +1,8 @@
-@extends('layouts.guest')
+@extends('layouts.auth')
+
+@section('title', 'Reset Password')
+@section('heading', 'Reset Password')
+@section('subheading', 'Create a new password for your account.')
 
 @section('content')
     <form method="POST" action="{{ route('password.store') }}">

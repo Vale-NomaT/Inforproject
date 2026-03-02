@@ -1,12 +1,13 @@
-@extends('layouts.guest')
+@extends('layouts.auth')
+
+@section('title', 'Forgot Password')
+@section('heading', 'Forgot Password?')
+@section('subheading', 'Enter your email to reset your password.')
 
 @section('content')
-    <div class="mb-4 text-sm text-gray-600">
+    <div class="mb-4 text-sm text-gray-600 dark:text-zink-200">
         {{ __('Forgot your password? No problem. Enter your email and we will send you a one-time code (OTP) to reset your password.') }}
     </div>
-
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
 
     <form method="POST" action="{{ route('password.email') }}">
         @csrf

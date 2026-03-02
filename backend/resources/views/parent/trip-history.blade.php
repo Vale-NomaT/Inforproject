@@ -11,12 +11,6 @@
     </div>
 </div>
 
-@if ($errors->any())
-    <div class="mb-4 px-4 py-3 rounded-md border border-red-200 bg-red-50 text-red-700">
-        {{ $errors->first() }}
-    </div>
-@endif
-
 @if ($child->school)
     <div class="mb-5">
         <p class="text-slate-500 dark:text-zink-200">

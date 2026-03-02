@@ -81,6 +81,25 @@ class DriverBookingController extends Controller
         $booking->responded_at = now();
         $booking->save();
 
+        // Load child with school details to get timings and location for pricing/distance
+        $booking->load(['child.school', 'child.pickupLocation']);
+        $child = $booking->child;
+        $schoolStartTime = $child ? $child->school_start_time : null;
+        $schoolEndTime = $child ? $child->school_end_time : null;
+
+        $distanceKm = null;
+        if ($child && $child->pickupLocation && $child->school) {
+            try {
+                $pricing = $this->pricingService->determinePricing(
+                    $child->pickupLocation,
+                    $child->school
+                );
+                $distanceKm = $pricing['distance'];
+            } catch (\Exception $e) {
+                // Ignore calculation errors
+            }
+        }
+
         // Generate trips for the next 30 days (weekdays only)
         $startDate = now();
         $endDate = now()->addDays(30);
@@ -97,6 +116,8 @@ class DriverBookingController extends Controller
                 ], [
                     'status' => Trip::STATUS_SCHEDULED,
                     'pricing_tier' => $booking->pricing_tier,
+                    'scheduled_time' => $schoolStartTime,
+                    'distance_km' => $distanceKm,
                 ]);
 
                 // Afternoon Trip (School -> Home)
@@ -108,6 +129,8 @@ class DriverBookingController extends Controller
                 ], [
                     'status' => Trip::STATUS_SCHEDULED,
                     'pricing_tier' => $booking->pricing_tier,
+                    'scheduled_time' => $schoolEndTime,
+                    'distance_km' => $distanceKm,
                 ]);
             }
         }

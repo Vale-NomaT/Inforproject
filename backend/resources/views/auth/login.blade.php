@@ -17,7 +17,7 @@
         <div class="mb-3">
             <div class="flex justify-between">
                 <label for="password" class="inline-block mb-2 text-base font-medium text-slate-500 dark:text-zink-200">Password</label>
-                <a href="" class="text-slate-500 dark:text-zink-200 text-sm hover:text-custom-500">Forgot Password?</a>
+                <a href="{{ route('password.request') }}" class="text-slate-500 dark:text-zink-200 text-sm hover:text-custom-500">Forgot Password?</a>
             </div>
             <input type="password" id="password" name="password" class="form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200 w-full rounded-md py-2 px-3" placeholder="Enter password" required>
             @error('password')

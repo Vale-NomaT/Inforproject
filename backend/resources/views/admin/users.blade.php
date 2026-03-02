@@ -29,11 +29,7 @@
             </div>
         </div>
 
-        @if (session('status'))
-            <div class="px-4 py-3 mb-4 text-sm text-green-700 bg-green-100 rounded-lg dark:bg-green-500/20 dark:text-green-400" role="alert">
-                {{ session('status') }}
-            </div>
-        @endif
+
 
         @if ($users->isEmpty())
             <div class="text-center py-10">

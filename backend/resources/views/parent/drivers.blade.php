@@ -16,14 +16,7 @@
             </div>
         </div>
 
-        @if (session('status'))
-            <div class="p-4 mb-6 text-sm text-green-700 bg-green-100 rounded-lg dark:bg-green-500/20 dark:text-green-400" role="alert">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="check-circle" class="w-5 h-5"></i>
-                    <span class="font-medium">{{ session('status') }}</span>
-                </div>
-            </div>
-        @endif
+
 
         <div class="grid gap-6 lg:grid-cols-12">
             <!-- Route Info Card -->

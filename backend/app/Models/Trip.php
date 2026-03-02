@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Trip extends Model
 {
+    use HasFactory;
+
     const STATUS_SCHEDULED = 'scheduled';
 
     const STATUS_IN_PROGRESS = 'in_progress';
@@ -22,6 +25,7 @@ class Trip extends Model
         'driver_id',
         'child_id',
         'scheduled_date',
+        'scheduled_time',
         'status',
         'type',
         'distance_km',

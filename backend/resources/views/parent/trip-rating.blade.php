@@ -13,12 +13,6 @@
 
 <div class="card max-w-xl mx-auto">
     <div class="card-body">
-        @if ($errors->any())
-            <div class="mb-4 px-4 py-3 rounded-md border border-red-200 bg-red-50 text-red-700">
-                {{ $errors->first() }}
-            </div>
-        @endif
-
         <div class="mb-4 text-sm text-slate-700 dark:text-zink-100">
             <p>
                 Trip date: <span class="font-medium text-slate-900 dark:text-zink-50">{{ $trip->scheduled_date->format('Y-m-d') }}</span>
