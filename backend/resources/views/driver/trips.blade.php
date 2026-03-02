@@ -71,8 +71,14 @@
                         };
                     @endphp
 
-                    <details class="card {{ $runStatus === \App\Models\Trip::STATUS_COMPLETED ? 'opacity-75 bg-slate-50 dark:bg-zink-700/50' : '' }}" data-run-key="{{ $run['key'] }}">
-                        <summary class="card-body cursor-pointer list-none">
+                    <div class="card {{ $runStatus === \App\Models\Trip::STATUS_COMPLETED ? 'opacity-75 bg-slate-50 dark:bg-zink-700/50' : '' }}" data-run-key="{{ $run['key'] }}">
+                        <div class="card-body cursor-pointer list-none" 
+                             onclick="toggleRun(this)" 
+                             onkeydown="if(event.key === 'Enter' || event.key === ' ') { event.preventDefault(); toggleRun(this); }"
+                             role="button" 
+                             tabindex="0"
+                             aria-expanded="false" 
+                             aria-controls="run-content-{{ $run['key'] }}">
                             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                                 <div class="flex flex-col gap-1">
                                     <div class="flex flex-wrap items-center gap-2">
@@ -95,10 +101,10 @@
 
                                 <div class="flex items-center gap-2 md:justify-end">
                                     @if ($runStatus === \App\Models\Trip::STATUS_SCHEDULED)
-                                        <form method="POST" action="{{ route('driver.runs.start') }}" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').innerText = 'Starting...'; this.querySelector('button[type=submit]').classList.add('opacity-75', 'cursor-not-allowed');">
+                                        <form method="POST" action="{{ route('driver.runs.start') }}" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').innerText = 'Starting...'; this.querySelector('button[type=submit]').classList.add('opacity-75', 'cursor-not-allowed');" onclick="event.stopPropagation()">
                                             @csrf
-                                            <input type="hidden" name="date" value="{{ $runDate }}">
-                                            <input type="hidden" name="type" value="{{ $runType }}">
+                                            <input type="hidden" name="date" id="date-{{ $run['key'] }}" value="{{ $runDate }}">
+                                            <input type="hidden" name="type" id="type-{{ $run['key'] }}" value="{{ $runType }}">
                                             <button type="submit" class="text-white btn bg-custom-500 border-custom-500 hover:text-white hover:bg-custom-600 hover:border-custom-600 focus:text-white focus:bg-custom-600 focus:border-custom-600 focus:ring focus:ring-custom-100 active:text-white active:bg-custom-600 active:border-custom-600 active:ring active:ring-custom-100 dark:ring-custom-400/20">
                                                 Start Trip
                                             </button>
@@ -106,9 +112,9 @@
                                     @endif
                                 </div>
                             </div>
-                        </summary>
+                        </div>
 
-                        <div class="px-5 pb-5 pt-0">
+                        <div class="run-content hidden px-5 pb-5 pt-0">
                             <div class="grid grid-cols-1 gap-3">
                                 @foreach ($run['trips'] as $trip)
                                     @php
@@ -214,7 +220,7 @@
                                 @endforeach
                             </div>
                         </div>
-                    </details>
+                    </div>
                 @endforeach
             </div>
         @endif
@@ -274,18 +280,45 @@
     function setActiveRun(runKey) {
         activeRunKey = runKey;
         
-        document.querySelectorAll('details[data-run-key]').forEach(d => {
-            if (d.dataset.runKey !== runKey) d.open = false;
+        // Close all other runs
+        document.querySelectorAll('.card[data-run-key]').forEach(c => {
+            const content = c.querySelector('.run-content');
+            if (c.dataset.runKey !== runKey) {
+                if (content) content.classList.add('hidden');
+            }
         });
 
-        const details = document.querySelector(`details[data-run-key="${runKey}"]`);
-        if (details) details.open = true;
+        // Open active run
+        const card = document.querySelector(`.card[data-run-key="${runKey}"]`);
+        if (card) {
+            const content = card.querySelector('.run-content');
+            if (content) content.classList.remove('hidden');
+        }
 
         renderStops();
         
         // If we have a location, start routing to the next stop
         if (lastDriverLatLng) {
             updateNavigation();
+        }
+    }
+
+    function toggleRun(header) {
+        const card = header.closest('.card');
+        const content = card.querySelector('.run-content');
+        if (!content) return;
+        
+        const isHidden = content.classList.contains('hidden');
+        
+        if (isHidden) {
+            // Opening
+            setActiveRun(card.dataset.runKey);
+        } else {
+            // Closing
+            content.classList.add('hidden');
+            if (activeRunKey === card.dataset.runKey) {
+                activeRunKey = null;
+            }
         }
     }
 
@@ -611,14 +644,6 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         initMap();
-
-        document.querySelectorAll('details[data-run-key]').forEach(d => {
-            d.addEventListener('toggle', () => {
-                if (d.open) {
-                    setActiveRun(d.dataset.runKey);
-                }
-            });
-        });
 
         // Use watchPosition for real-time updates
         if (navigator.geolocation) {
