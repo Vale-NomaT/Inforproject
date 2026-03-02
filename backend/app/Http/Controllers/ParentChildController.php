@@ -30,8 +30,8 @@ class ParentChildController extends Controller
             'date_of_birth' => ['required', 'date', 'before_or_equal:-4 years', 'after:-15 years'],
             'school_id' => ['required', 'exists:schools,id'],
             'pickup_location_id' => ['required', 'exists:locations,id'],
-            'custom_lat' => ['required', 'numeric'],
-            'custom_lng' => ['required', 'numeric'],
+            'custom_lat' => ['nullable', 'numeric'],
+            'custom_lng' => ['nullable', 'numeric'],
             'custom_location_name' => ['nullable', 'string'],
             'relationship' => ['required', 'string', 'in:Mother,Father,Guardian,Grandparent,Other'],
             'school_start_time' => ['required', 'date_format:H:i'],
@@ -40,12 +40,15 @@ class ParentChildController extends Controller
             'medical_notes' => ['nullable', 'string'],
         ]);
 
+        $pickupLocation = Location::find($validated['pickup_location_id']);
+        $customLat = $request->input('custom_lat');
+        $customLng = $request->input('custom_lng');
+
         $child = new Child();
         $child->fill($validated);
-        // Map custom fields to new columns
-        $child->pickup_lat = $validated['custom_lat'];
-        $child->pickup_lng = $validated['custom_lng'];
-        $child->pickup_address = $validated['custom_location_name'] ?? 'Home';
+        $child->pickup_lat = is_numeric($customLat) ? (float) $customLat : ($pickupLocation ? $pickupLocation->lat : null);
+        $child->pickup_lng = is_numeric($customLng) ? (float) $customLng : ($pickupLocation ? $pickupLocation->lng : null);
+        $child->pickup_address = $validated['custom_location_name'] ?? ($pickupLocation ? $pickupLocation->name : 'Home');
         
         $child->parent_id = $request->user()->id;
         $child->save();
@@ -82,8 +85,8 @@ class ParentChildController extends Controller
             'date_of_birth' => ['required', 'date', 'before_or_equal:-4 years', 'after:-15 years'],
             'school_id' => ['required', 'exists:schools,id'],
             'pickup_location_id' => ['required', 'exists:locations,id'],
-            'custom_lat' => ['required', 'numeric'],
-            'custom_lng' => ['required', 'numeric'],
+            'custom_lat' => ['nullable', 'numeric'],
+            'custom_lng' => ['nullable', 'numeric'],
             'custom_location_name' => ['nullable', 'string'],
             'relationship' => ['required', 'string', 'in:Mother,Father,Guardian,Grandparent,Other'],
             'school_start_time' => ['required', 'date_format:H:i'],
@@ -92,15 +95,28 @@ class ParentChildController extends Controller
             'medical_notes' => ['nullable', 'string'],
         ]);
 
+        $pickupLocation = Location::find($validated['pickup_location_id']);
+        $customLat = $request->input('custom_lat');
+        $customLng = $request->input('custom_lng');
+
         $child->fill($validated);
-        // Map custom fields to new columns
-        $child->pickup_lat = $validated['custom_lat'];
-        $child->pickup_lng = $validated['custom_lng'];
-        $child->pickup_address = $validated['custom_location_name'] ?? $child->pickup_address ?? 'Home';
+        if (is_numeric($customLat)) {
+            $child->pickup_lat = (float) $customLat;
+        } elseif ($pickupLocation) {
+            $child->pickup_lat = $pickupLocation->lat;
+        }
+
+        if (is_numeric($customLng)) {
+            $child->pickup_lng = (float) $customLng;
+        } elseif ($pickupLocation) {
+            $child->pickup_lng = $pickupLocation->lng;
+        }
+
+        $child->pickup_address = $validated['custom_location_name'] ?? ($pickupLocation ? $pickupLocation->name : ($child->pickup_address ?? 'Home'));
 
         $child->save();
 
         return redirect()->route('parent.dashboard')
-            ->with('status', 'Child updated successfully!');
+            ->with('status', 'Child details updated successfully!');
     }
 }

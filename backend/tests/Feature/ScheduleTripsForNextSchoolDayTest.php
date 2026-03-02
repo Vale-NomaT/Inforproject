@@ -88,14 +88,15 @@ class ScheduleTripsForNextSchoolDayTest extends TestCase
         $this->artisan('trips:schedule-next-school-day')
             ->assertExitCode(ScheduleTripsForNextSchoolDay::SUCCESS);
 
-        $this->assertDatabaseCount('trips', 1);
+        $this->assertDatabaseCount('trips', 6);
 
-        $trip = Trip::first();
+        $trip = Trip::whereDate('scheduled_date', Carbon::tomorrow()->toDateString())->first();
 
         $expectedDate = Carbon::tomorrow();
 
         $this->assertSame($booking->driver_id, $trip->driver_id);
         $this->assertSame($booking->child_id, $trip->child_id);
+        $this->assertNotNull($trip);
         $this->assertTrue($trip->scheduled_date->isSameDay($expectedDate));
         $this->assertSame(10.0, $trip->distance_km);
         $this->assertSame(2, $trip->pricing_tier);

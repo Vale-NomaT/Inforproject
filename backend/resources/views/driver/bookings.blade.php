@@ -35,7 +35,7 @@
 
         <!-- Pending Requests Section -->
         <div class="mb-8">
-            <h5 class="mb-4 text-15 font-bold text-slate-900 dark:text-zink-50">Pending Requests <span class="ml-2 inline-flex items-center justify-center w-[22px] h-[22px] text-xs font-medium rounded-full bg-custom-100 text-custom-500 dark:bg-custom-500/20 dark:text-custom-500">{{ $bookings->count() }}</span></h5>
+            <h5 class="mb-4 text-15 font-bold text-slate-900 dark:text-zink-50">Pending Booking Requests <span class="ml-2 inline-flex items-center justify-center w-[22px] h-[22px] text-xs font-medium rounded-full bg-custom-100 text-custom-500 dark:bg-custom-500/20 dark:text-custom-500">{{ $bookings->count() }}</span></h5>
             
             @if ($bookings->isEmpty())
                 <div class="card h-[200px] flex items-center justify-center border-dashed border-2 border-slate-200 dark:border-zink-500 bg-transparent shadow-none">

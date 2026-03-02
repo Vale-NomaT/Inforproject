@@ -25,7 +25,31 @@ class DriverTripController extends Controller
             ->orderByDesc('type') // Morning first
             ->get();
 
-        return view('driver.trips', compact('trips'));
+        $runs = $trips
+            ->groupBy(function (Trip $trip) {
+                $date = $trip->scheduled_date ? $trip->scheduled_date->format('Y-m-d') : 'unknown';
+
+                return $date.'|'.$trip->type;
+            })
+            ->map(function ($group, string $key) {
+                [$date, $type] = array_pad(explode('|', $key, 2), 2, null);
+
+                $hasInProgress = $group->contains(fn (Trip $trip) => $trip->status === Trip::STATUS_IN_PROGRESS);
+
+                return [
+                    'key' => $key,
+                    'date' => $date,
+                    'type' => $type,
+                    'status' => $hasInProgress ? Trip::STATUS_IN_PROGRESS : Trip::STATUS_SCHEDULED,
+                    'trips' => $group->values(),
+                ];
+            })
+            ->values();
+
+        return view('driver.trips', [
+            'runs' => $runs,
+            'trips' => $trips,
+        ]);
     }
 
     public function map(Request $request): View
@@ -88,6 +112,42 @@ class DriverTripController extends Controller
         $this->notifyParent($trip, 'Driver has started the trip.');
 
         return back()->with('status', 'Trip started. Tracking is now active.');
+    }
+
+    public function startRun(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'date' => ['required', 'date'],
+            'type' => ['required', 'in:'.Trip::TYPE_MORNING.','.Trip::TYPE_AFTERNOON],
+        ]);
+
+        $trips = Trip::with(['child'])
+            ->where('driver_id', $request->user()->id)
+            ->whereDate('scheduled_date', $data['date'])
+            ->where('type', $data['type'])
+            ->where('status', Trip::STATUS_SCHEDULED)
+            ->get();
+
+        if ($trips->isEmpty()) {
+            return back();
+        }
+
+        foreach ($trips as $trip) {
+            $trip->status = Trip::STATUS_IN_PROGRESS;
+            $trip->save();
+
+            $event = TripEvent::create([
+                'trip_id' => $trip->id,
+                'type' => 'started',
+                'created_at' => now(),
+            ]);
+
+            Event::dispatch(new TripEventBroadcasted($event));
+
+            $this->notifyParent($trip, 'Driver has started the trip.');
+        }
+
+        return back()->with('status', 'Route started. Tracking is now active.');
     }
 
     /**

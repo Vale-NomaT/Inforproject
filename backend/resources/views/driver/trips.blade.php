@@ -23,7 +23,7 @@
             Updating location...
         </div>
 
-        @if (!$trips->isEmpty())
+        @if (!empty($runs) && count($runs) > 0)
             <div class="card mb-5">
                 <div class="card-body">
                     <h6 class="mb-3 text-sm font-semibold text-slate-900 dark:text-zink-50">Today's Route Map</h6>
@@ -32,7 +32,7 @@
             </div>
         @endif
 
-        @if ($trips->isEmpty())
+        @if (empty($runs) || count($runs) === 0)
             <div class="card">
                 <div class="card-body text-center py-10">
                     <h5 class="text-16 mb-2">No scheduled trips</h5>
@@ -41,96 +41,108 @@
             </div>
         @else
             <div class="space-y-4">
-                @foreach ($trips as $trip)
-                    <div class="card" data-trip-id="{{ $trip->id }}" data-status="{{ $trip->status }}">
-                        <div class="card-body">
-                            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                                <div>
-                                    <div class="flex items-center gap-2 mb-1">
-                                        <h6 class="text-15 font-semibold text-slate-900 dark:text-zink-50">
-                                            {{ $trip->child ? $trip->child->first_name . ' ' . $trip->child->last_name : 'Child' }}
-                                        </h6>
-                                        @php
-                                            $isMorning = $trip->type === 'morning';
-                                            $typeLabel = $isMorning ? 'Morning Run' : 'Afternoon Run';
-                                            $typeClass = $isMorning 
-                                                ? 'bg-orange-100 text-orange-500 border-orange-200 dark:bg-orange-500/20 dark:border-orange-500/20' 
-                                                : 'bg-purple-100 text-purple-500 border-purple-200 dark:bg-purple-500/20 dark:border-purple-500/20';
-                                        @endphp
-                                        <span class="px-2 py-0.5 text-xs font-medium rounded border {{ $typeClass }}">
-                                            {{ $typeLabel }}
-                                        </span>
+                @foreach ($runs as $run)
+                    @php
+                        $runType = $run['type'];
+                        $runDate = $run['date'];
+                        $runLabel = ($runType === \App\Models\Trip::TYPE_MORNING ? 'Morning Run' : 'Afternoon Run').' • '.\Carbon\Carbon::parse($runDate)->format('D, M d, Y');
+                        $runTypeClass = $runType === \App\Models\Trip::TYPE_MORNING
+                            ? 'bg-orange-100 text-orange-500 border-orange-200 dark:bg-orange-500/20 dark:border-orange-500/20'
+                            : 'bg-purple-100 text-purple-500 border-purple-200 dark:bg-purple-500/20 dark:border-purple-500/20';
+                        $runStatus = $run['status'];
+                        $runStatusClass = $runStatus === \App\Models\Trip::STATUS_IN_PROGRESS
+                            ? 'border-green-200 bg-green-100 text-green-500 dark:bg-green-500/20 dark:border-green-500/20'
+                            : 'border-yellow-200 bg-yellow-100 text-yellow-500 dark:bg-yellow-500/20 dark:border-yellow-500/20';
+                    @endphp
+
+                    <details class="card" data-run-key="{{ $run['key'] }}">
+                        <summary class="card-body cursor-pointer list-none">
+                            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                <div class="flex flex-col gap-1">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h6 class="text-15 font-semibold text-slate-900 dark:text-zink-50">Trip {{ $run['key'] }}</h6>
+                                        <span class="px-2 py-0.5 text-xs font-medium rounded border {{ $runTypeClass }}">{{ $runType === \App\Models\Trip::TYPE_MORNING ? 'Morning Run' : 'Afternoon Run' }}</span>
+                                        <span class="px-2.5 py-0.5 text-xs inline-block font-medium rounded border {{ $runStatusClass }}">{{ $runStatus === \App\Models\Trip::STATUS_IN_PROGRESS ? 'In Progress' : 'Scheduled' }}</span>
                                     </div>
-                                    <p class="text-slate-500 dark:text-zink-200 mb-1">
-                                        Date: <span class="font-medium text-slate-800 dark:text-zink-50">
-                                            {{ $trip->scheduled_date->format('l, M d, Y') }}
-                                            @if($trip->child && $trip->child->school_start_time && $isMorning)
-                                                at {{ \Carbon\Carbon::parse($trip->child->school_start_time)->format('H:i') }}
-                                            @elseif($trip->child && $trip->child->school_end_time && !$isMorning)
-                                                at {{ \Carbon\Carbon::parse($trip->child->school_end_time)->format('H:i') }}
-                                            @endif
-                                        </span>
+                                    <p class="text-slate-500 dark:text-zink-200 text-sm">
+                                        {{ $runLabel }} • {{ count($run['trips']) }} {{ count($run['trips']) === 1 ? 'child' : 'children' }}
                                     </p>
-                                    @if ($trip->child && $trip->child->pickupLocation && $trip->child->school)
-                                        @php
-                                            $pickupName = $trip->child->pickup_address ?? $trip->child->pickupLocation->name;
-                                        @endphp
-                                        <p class="text-slate-500 dark:text-zink-200">
-                                            Route: 
-                                            <span class="font-medium text-slate-800 dark:text-zink-50">
-                                                @if($isMorning)
-                                                    {{ $pickupName }} &rarr; {{ $trip->child->school->name }}
-                                                @else
-                                                    {{ $trip->child->school->name }} &rarr; {{ $pickupName }}
-                                                @endif
-                                            </span>
-                                        </p>
-                                    @endif
                                 </div>
-                                <div class="flex flex-col items-end gap-2">
-                                    @if ($trip->status === \App\Models\Trip::STATUS_SCHEDULED)
-                                        <span class="px-2.5 py-0.5 text-xs inline-block font-medium rounded border border-yellow-200 bg-yellow-100 text-yellow-500 dark:bg-yellow-500/20 dark:border-yellow-500/20">
-                                            Scheduled
-                                        </span>
-                                    @elseif ($trip->status === \App\Models\Trip::STATUS_IN_PROGRESS)
-                                        <span class="px-2.5 py-0.5 text-xs inline-block font-medium rounded border border-green-200 bg-green-100 text-green-500 dark:bg-green-500/20 dark:border-green-500/20">
-                                            In Progress
-                                        </span>
-                                    @else
-                                        <span class="px-2.5 py-0.5 text-xs inline-block font-medium rounded border border-slate-200 bg-slate-100 text-slate-500 dark:bg-slate-500/20 dark:border-slate-500/20 dark:text-zink-200">
-                                            Completed
-                                        </span>
+
+                                <div class="flex items-center gap-2 md:justify-end">
+                                    @if ($runStatus === \App\Models\Trip::STATUS_SCHEDULED)
+                                        <form method="POST" action="{{ route('driver.runs.start') }}">
+                                            @csrf
+                                            <input type="hidden" name="date" value="{{ $runDate }}">
+                                            <input type="hidden" name="type" value="{{ $runType }}">
+                                            <button type="submit" class="text-white btn bg-custom-500 border-custom-500 hover:text-white hover:bg-custom-600 hover:border-custom-600 focus:text-white focus:bg-custom-600 focus:border-custom-600 focus:ring focus:ring-custom-100 active:text-white active:bg-custom-600 active:border-custom-600 active:ring active:ring-custom-100 dark:ring-custom-400/20">
+                                                Start Trip
+                                            </button>
+                                        </form>
                                     @endif
                                 </div>
                             </div>
+                        </summary>
 
-                            @if ($trip->status === \App\Models\Trip::STATUS_SCHEDULED)
-                                <div class="mt-4 flex justify-end">
-                                    <form method="POST" action="{{ route('driver.trips.start', ['trip' => $trip->id]) }}">
-                                        @csrf
-                                        <button type="submit" class="text-white btn bg-custom-500 border-custom-500 hover:text-white hover:bg-custom-600 hover:border-custom-600 focus:text-white focus:bg-custom-600 focus:border-custom-600 focus:ring focus:ring-custom-100 active:text-white active:bg-custom-600 active:border-custom-600 active:ring active:ring-custom-100 dark:ring-custom-400/20">
-                                            Start Trip
-                                        </button>
-                                    </form>
-                                </div>
-                            @elseif ($trip->status === \App\Models\Trip::STATUS_IN_PROGRESS)
-                                <div class="mt-4 flex flex-wrap gap-2 justify-end">
-                                    <button type="button" onclick="logEvent('{{ $trip->id }}', 'arrived')" class="text-white btn bg-yellow-500 border-yellow-500 hover:text-white hover:bg-yellow-600 hover:border-yellow-600 focus:text-white focus:bg-yellow-600 focus:border-yellow-600 focus:ring focus:ring-yellow-100 active:text-white active:bg-yellow-600 active:border-yellow-600 active:ring active:ring-yellow-100 dark:ring-yellow-400/20 text-xs">
-                                        Arrived at Pickup
-                                    </button>
-                                    <button type="button" onclick="logEvent('{{ $trip->id }}', 'picked_up')" class="text-white btn bg-purple-500 border-purple-500 hover:text-white hover:bg-purple-600 hover:border-purple-600 focus:text-white focus:bg-purple-600 focus:border-purple-600 focus:ring focus:ring-purple-100 active:text-white active:bg-purple-600 active:border-purple-600 active:ring active:ring-purple-100 dark:ring-purple-400/20 text-xs">
-                                        Picked Up
-                                    </button>
-                                    <button type="button" onclick="logEvent('{{ $trip->id }}', 'arrived_dropoff')" class="text-white btn bg-orange-500 border-orange-500 hover:text-white hover:bg-orange-600 hover:border-orange-600 focus:text-white focus:bg-orange-600 focus:border-orange-600 focus:ring focus:ring-orange-100 active:text-white active:bg-orange-600 active:border-orange-600 active:ring active:ring-orange-100 dark:ring-orange-400/20 text-xs">
-                                        Arrived at Drop-off
-                                    </button>
-                                    <button type="button" onclick="logEvent('{{ $trip->id }}', 'dropped_off')" class="text-white btn bg-green-500 border-green-500 hover:text-white hover:bg-green-600 hover:border-green-600 focus:text-white focus:bg-green-600 focus:border-green-600 focus:ring focus:ring-green-100 active:text-white active:bg-green-600 active:border-green-600 active:ring active:ring-green-100 dark:ring-green-400/20 text-xs">
-                                        Dropped Off
-                                    </button>
-                                </div>
-                            @endif
+                        <div class="px-5 pb-5 pt-0">
+                            <div class="grid grid-cols-1 gap-3">
+                                @foreach ($run['trips'] as $trip)
+                                    @php
+                                        $isMorning = $trip->type === \App\Models\Trip::TYPE_MORNING;
+                                        $pickupName = $trip->child && $trip->child->pickupLocation ? ($trip->child->pickup_address ?? $trip->child->pickupLocation->name) : 'Home';
+                                        $schoolName = $trip->child && $trip->child->school ? $trip->child->school->name : 'School';
+                                    @endphp
+                                    <div class="rounded-xl border border-slate-200 bg-white p-4 dark:bg-zink-700 dark:border-zink-500 card" data-trip-id="{{ $trip->id }}" data-status="{{ $trip->status }}">
+                                        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
+                                            <div>
+                                                <h6 class="text-15 font-semibold text-slate-900 dark:text-zink-50">
+                                                    {{ $trip->child ? $trip->child->first_name . ' ' . $trip->child->last_name : 'Child' }}
+                                                </h6>
+                                                <p class="text-slate-500 dark:text-zink-200 text-sm">
+                                                    Route:
+                                                    <span class="font-medium text-slate-800 dark:text-zink-50">
+                                                        @if($isMorning)
+                                                            {{ $pickupName }} &rarr; {{ $schoolName }}
+                                                        @else
+                                                            {{ $schoolName }} &rarr; {{ $pickupName }}
+                                                        @endif
+                                                    </span>
+                                                </p>
+                                            </div>
+                                            <div class="flex flex-col items-end gap-2">
+                                                @if ($trip->status === \App\Models\Trip::STATUS_SCHEDULED)
+                                                    <span class="px-2.5 py-0.5 text-xs inline-block font-medium rounded border border-yellow-200 bg-yellow-100 text-yellow-500 dark:bg-yellow-500/20 dark:border-yellow-500/20">
+                                                        Scheduled
+                                                    </span>
+                                                @elseif ($trip->status === \App\Models\Trip::STATUS_IN_PROGRESS)
+                                                    <span class="px-2.5 py-0.5 text-xs inline-block font-medium rounded border border-green-200 bg-green-100 text-green-500 dark:bg-green-500/20 dark:border-green-500/20">
+                                                        In Progress
+                                                    </span>
+                                                @endif
+                                            </div>
+                                        </div>
+
+                                        @if ($trip->status === \App\Models\Trip::STATUS_IN_PROGRESS)
+                                            <div class="mt-3 flex flex-wrap gap-2 justify-end">
+                                                <button type="button" onclick="logEvent('{{ $trip->id }}', 'arrived')" class="text-white btn bg-yellow-500 border-yellow-500 hover:text-white hover:bg-yellow-600 hover:border-yellow-600 focus:text-white focus:bg-yellow-600 focus:border-yellow-600 focus:ring focus:ring-yellow-100 active:text-white active:bg-yellow-600 active:border-yellow-600 active:ring active:ring-yellow-100 dark:ring-yellow-400/20 text-xs">
+                                                    Arrived at Pickup
+                                                </button>
+                                                <button type="button" onclick="logEvent('{{ $trip->id }}', 'picked_up')" class="text-white btn bg-purple-500 border-purple-500 hover:text-white hover:bg-purple-600 hover:border-purple-600 focus:text-white focus:bg-purple-600 focus:border-purple-600 focus:ring focus:ring-purple-100 active:text-white active:bg-purple-600 active:border-purple-600 active:ring active:ring-purple-100 dark:ring-purple-400/20 text-xs">
+                                                    Picked Up
+                                                </button>
+                                                <button type="button" onclick="logEvent('{{ $trip->id }}', 'arrived_dropoff')" class="text-white btn bg-orange-500 border-orange-500 hover:text-white hover:bg-orange-600 hover:border-orange-600 focus:text-white focus:bg-orange-600 focus:border-orange-600 focus:ring focus:ring-orange-100 active:text-white active:bg-orange-600 active:border-orange-600 active:ring active:ring-orange-100 dark:ring-orange-400/20 text-xs">
+                                                    Arrived at Drop-off
+                                                </button>
+                                                <button type="button" onclick="logEvent('{{ $trip->id }}', 'dropped_off')" class="text-white btn bg-green-500 border-green-500 hover:text-white hover:bg-green-600 hover:border-green-600 focus:text-white focus:bg-green-600 focus:border-green-600 focus:ring focus:ring-green-100 active:text-white active:bg-green-600 active:border-green-600 active:ring active:ring-green-100 dark:ring-green-400/20 text-xs">
+                                                    Dropped Off
+                                                </button>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
                         </div>
-                    </div>
+                    </details>
                 @endforeach
             </div>
         @endif
@@ -141,22 +153,26 @@
 
 @section('script')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 <script>
     let geoPermissionDenied = false;
     let driverMarker = null;
-    let routingControl = null;
     let map = null;
+    let activeRunKey = null;
+    let stopMarkers = [];
+    let routePolylines = [];
+    let routeLabels = [];
+    let lastDriverLatLng = null;
+    let currentRoutes = null;
+    let selectedRouteIndex = 0;
+    let osrmAbortController = null;
 
-    // Prepare trip data from PHP
-    const trips = @json($trips);
+    const runs = @json($runs);
     const csrfToken = '{{ csrf_token() }}';
     const updateLocationUrl = '{{ route("driver.location.update") }}';
 
     function initMap() {
-        if (trips.length === 0) return;
+        if (!runs || runs.length === 0) return;
 
         const mapContainer = document.getElementById('driver-route-map');
         if (!mapContainer) return;
@@ -168,7 +184,92 @@
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // Icons
+        const firstRun = runs.find(r => r.status === 'in_progress') || runs[0];
+        if (firstRun) {
+            setActiveRun(firstRun.key);
+        }
+    }
+
+    function setActiveRun(runKey) {
+        activeRunKey = runKey;
+        selectedRouteIndex = 0;
+        currentRoutes = null;
+
+        document.querySelectorAll('details[data-run-key]').forEach(d => {
+            if (d.dataset.runKey !== runKey) d.open = false;
+        });
+
+        const details = document.querySelector(`details[data-run-key="${runKey}"]`);
+        if (details) details.open = true;
+
+        renderStops();
+        if (lastDriverLatLng) {
+            renderRoutes(lastDriverLatLng);
+        } else {
+            renderRoutes(null);
+        }
+    }
+
+    function getActiveRun() {
+        if (!activeRunKey) return null;
+        return runs.find(r => r.key === activeRunKey) || null;
+    }
+
+    function clearLayers(list) {
+        if (!map) return;
+        list.forEach(layer => {
+            try { map.removeLayer(layer); } catch (e) {}
+        });
+        list.length = 0;
+    }
+
+    function pickupLatLngForTrip(trip) {
+        const child = trip.child;
+        if (!child) return null;
+        const isMorning = trip.type === 'morning';
+
+        let lat = null;
+        let lng = null;
+
+        if (isMorning) {
+            lat = child.pickup_lat || (child.pickup_location ? child.pickup_location.lat : null);
+            lng = child.pickup_lng || (child.pickup_location ? child.pickup_location.lng : null);
+        } else {
+            lat = child.school ? child.school.lat : null;
+            lng = child.school ? child.school.lng : null;
+        }
+
+        if (!lat || !lng) return null;
+        return L.latLng(parseFloat(lat), parseFloat(lng));
+    }
+
+    function dropoffLatLngForTrip(trip) {
+        const child = trip.child;
+        if (!child) return null;
+        const isMorning = trip.type === 'morning';
+
+        let lat = null;
+        let lng = null;
+
+        if (isMorning) {
+            lat = child.school ? child.school.lat : null;
+            lng = child.school ? child.school.lng : null;
+        } else {
+            lat = child.pickup_lat || (child.pickup_location ? child.pickup_location.lat : null);
+            lng = child.pickup_lng || (child.pickup_location ? child.pickup_location.lng : null);
+        }
+
+        if (!lat || !lng) return null;
+        return L.latLng(parseFloat(lat), parseFloat(lng));
+    }
+
+    function renderStops() {
+        if (!map) return;
+        clearLayers(stopMarkers);
+
+        const run = getActiveRun();
+        if (!run || !run.trips) return;
+
         const pickupIcon = L.divIcon({
             className: 'custom-div-icon',
             html: "<div style='background-color: #22c55e; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 4px rgba(0,0,0,0.3);'></div>",
@@ -183,200 +284,265 @@
             iconAnchor: [6, 6]
         });
 
-        const waypoints = [];
         const bounds = L.latLngBounds();
 
-        // Process trips to build waypoints
-        // Logic: Pickups first, then Dropoffs (for Morning). 
-        
-        const pickups = [];
-        const dropoffs = [];
-
-        trips.forEach(trip => {
+        run.trips.forEach(trip => {
             const child = trip.child;
             if (!child) return;
 
-            const isMorning = trip.type === 'morning';
-            
-            let pickupLat, pickupLng, pickupName, dropoffLat, dropoffLng, dropoffName;
+            const pickup = pickupLatLngForTrip(trip);
+            const dropoff = dropoffLatLngForTrip(trip);
 
-            if (isMorning) {
-                // Morning: Home -> School
-                pickupLat = child.pickup_lat || (child.pickup_location ? child.pickup_location.lat : null);
-                pickupLng = child.pickup_lng || (child.pickup_location ? child.pickup_location.lng : null);
-                pickupName = child.pickup_address || (child.pickup_location ? child.pickup_location.name : 'Home');
-                
-                dropoffLat = child.school ? child.school.lat : null;
-                dropoffLng = child.school ? child.school.lng : null;
-                dropoffName = child.school ? child.school.name : 'School';
-            } else {
-                // Afternoon: School -> Home
-                pickupLat = child.school ? child.school.lat : null;
-                pickupLng = child.school ? child.school.lng : null;
-                pickupName = child.school ? child.school.name : 'School';
+            const pickupName = child.pickup_address || (child.pickup_location ? child.pickup_location.name : 'Home');
+            const schoolName = child.school ? child.school.name : 'School';
 
-                dropoffLat = child.pickup_lat || (child.pickup_location ? child.pickup_location.lat : null);
-                dropoffLng = child.pickup_lng || (child.pickup_location ? child.pickup_location.lng : null);
-                dropoffName = child.pickup_address || (child.pickup_location ? child.pickup_location.name : 'Home');
+            if (pickup) {
+                const marker = L.marker(pickup, {icon: pickupIcon})
+                    .bindPopup(`<b>Pickup: ${child.first_name}</b><br>${trip.type === 'morning' ? pickupName : schoolName}`);
+                marker.addTo(map);
+                stopMarkers.push(marker);
+                bounds.extend(pickup);
             }
 
-            // Add Markers
-            if (pickupLat && pickupLng) {
-                L.marker([pickupLat, pickupLng], {icon: pickupIcon})
-                    .bindPopup(`<b>Pickup: ${child.first_name}</b><br>${pickupName}`)
-                    .addTo(map);
-                bounds.extend([pickupLat, pickupLng]);
-                
-                // Store with metadata
-                // We allow duplicates in list if we want to show multiple stops at same location (e.g. siblings), 
-                // but for routing efficiency OSRM might merge them.
-                // For now, we add all.
-                pickups.push({
-                    latLng: L.latLng(pickupLat, pickupLng),
-                    tripId: trip.id,
-                    type: 'pickup',
-                    name: pickupName,
-                    childName: child.first_name
-                });
-            }
-
-            if (dropoffLat && dropoffLng) {
-                L.marker([dropoffLat, dropoffLng], {icon: dropoffIcon})
-                    .bindPopup(`<b>Dropoff: ${child.first_name}</b><br>${dropoffName}`)
-                    .addTo(map);
-                bounds.extend([dropoffLat, dropoffLng]);
-
-                dropoffs.push({
-                    latLng: L.latLng(dropoffLat, dropoffLng),
-                    tripId: trip.id,
-                    type: 'dropoff',
-                    name: dropoffName,
-                    childName: child.first_name
-                });
+            if (dropoff) {
+                const marker = L.marker(dropoff, {icon: dropoffIcon})
+                    .bindPopup(`<b>Drop-off: ${child.first_name}</b><br>${trip.type === 'morning' ? schoolName : pickupName}`);
+                marker.addTo(map);
+                stopMarkers.push(marker);
+                bounds.extend(dropoff);
             }
         });
+
+        if (lastDriverLatLng) bounds.extend(lastDriverLatLng);
 
         if (bounds.isValid()) {
-            map.fitBounds(bounds, {padding: [50, 50]});
+            map.fitBounds(bounds, {padding: [40, 40]});
         }
-
-        // Initialize Routing with placeholders
-        window.routePoints = { pickups, dropoffs };
     }
 
-    function updateRouting(driverLatLng) {
-        if (!map) return;
-        // Safety check for routePoints
-        if (!window.routePoints || !window.routePoints.pickups || !window.routePoints.dropoffs) {
-            console.warn("Route points not initialized yet.");
-            return;
-        }
-        
-        const points = [];
-        if (driverLatLng) {
-            points.push(L.latLng(parseFloat(driverLatLng.lat), parseFloat(driverLatLng.lng)));
-        }
-        
-        // Add Pickups then Dropoffs
-        // We need to keep track of which point corresponds to which trip to update UI
+    function haversineKm(a, b) {
+        const toRad = d => (d * Math.PI) / 180;
+        const R = 6371;
+        const dLat = toRad(b.lat - a.lat);
+        const dLng = toRad(b.lng - a.lng);
+        const s1 = Math.sin(dLat / 2);
+        const s2 = Math.sin(dLng / 2);
+        const q = s1 * s1 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * s2 * s2;
+        return 2 * R * Math.atan2(Math.sqrt(q), Math.sqrt(1 - q));
+    }
+
+    function buildOrderedStops(startLatLng) {
+        const run = getActiveRun();
+        if (!run || !run.trips) return { orderedStops: [], orderedLatLngs: [] };
+
+        const pickups = [];
+        const dropoffs = [];
+
+        run.trips.forEach(trip => {
+            const child = trip.child;
+            if (!child) return;
+
+            const pickup = pickupLatLngForTrip(trip);
+            const dropoff = dropoffLatLngForTrip(trip);
+
+            const pickupName = child.pickup_address || (child.pickup_location ? child.pickup_location.name : 'Home');
+            const schoolName = child.school ? child.school.name : 'School';
+
+            if (pickup) {
+                pickups.push({
+                    latLng: pickup,
+                    tripId: trip.id,
+                    type: 'pickup',
+                    label: trip.type === 'morning' ? pickupName : schoolName,
+                    childName: child.first_name
+                });
+            }
+            if (dropoff) {
+                dropoffs.push({
+                    latLng: dropoff,
+                    tripId: trip.id,
+                    type: 'dropoff',
+                    label: trip.type === 'morning' ? schoolName : pickupName,
+                    childName: child.first_name
+                });
+            }
+        });
+
+        if (pickups.length === 0 && dropoffs.length === 0) return { orderedStops: [], orderedLatLngs: [] };
+
         const orderedStops = [];
 
-        window.routePoints.pickups.forEach(p => {
-            if (p.latLng) {
-                points.push(p.latLng);
-                orderedStops.push(p);
-            }
-        });
-        window.routePoints.dropoffs.forEach(p => {
-            if (p.latLng) {
-                points.push(p.latLng);
-                orderedStops.push(p);
-            }
-        });
+        let cursor = startLatLng || pickups[0]?.latLng || dropoffs[0]?.latLng;
+        const remainingPickups = pickups.slice();
 
+        while (cursor && remainingPickups.length > 0) {
+            let bestIdx = 0;
+            let bestDist = Infinity;
+            for (let i = 0; i < remainingPickups.length; i++) {
+                const d = haversineKm(cursor, remainingPickups[i].latLng);
+                if (d < bestDist) {
+                    bestDist = d;
+                    bestIdx = i;
+                }
+            }
+            const next = remainingPickups.splice(bestIdx, 1)[0];
+            orderedStops.push(next);
+            cursor = next.latLng;
+        }
+
+        const remainingDropoffs = dropoffs.slice();
+        while (cursor && remainingDropoffs.length > 0) {
+            let bestIdx = 0;
+            let bestDist = Infinity;
+            for (let i = 0; i < remainingDropoffs.length; i++) {
+                const d = haversineKm(cursor, remainingDropoffs[i].latLng);
+                if (d < bestDist) {
+                    bestDist = d;
+                    bestIdx = i;
+                }
+            }
+            const next = remainingDropoffs.splice(bestIdx, 1)[0];
+            orderedStops.push(next);
+            cursor = next.latLng;
+        }
+
+        const orderedLatLngs = orderedStops.map(s => s.latLng);
+        return { orderedStops, orderedLatLngs };
+    }
+
+    function routeUrl(points) {
+        const coords = points.map(p => `${p.lng},${p.lat}`).join(';');
+        return `https://router.project-osrm.org/route/v1/driving/${coords}?alternatives=true&overview=full&geometries=geojson&steps=false`;
+    }
+
+    function renderRoutes(driverLatLng) {
+        if (!map) return;
+        clearLayers(routePolylines);
+        clearLayers(routeLabels);
+        currentRoutes = null;
+
+        const run = getActiveRun();
+        if (!run || !run.trips || run.trips.length === 0) return;
+
+        const start = driverLatLng || pickupLatLngForTrip(run.trips[0]) || dropoffLatLngForTrip(run.trips[0]);
+        if (!start) return;
+
+        const { orderedStops, orderedLatLngs } = buildOrderedStops(driverLatLng || start);
+        if (orderedLatLngs.length === 0) return;
+
+        const points = [start, ...orderedLatLngs];
         if (points.length < 2) return;
 
-        if (routingControl) {
-            map.removeControl(routingControl);
+        if (osrmAbortController) {
+            try { osrmAbortController.abort(); } catch (e) {}
         }
+        osrmAbortController = new AbortController();
 
-        try {
-            routingControl = L.Routing.control({
-                waypoints: points,
-                router: L.Routing.osrmv1({
-                    serviceUrl: 'https://router.project-osrm.org/route/v1',
-                    routingOptions: {
-                        alternatives: true
-                    }
-                }),
-                lineOptions: {
-                    styles: [{color: '#6366f1', opacity: 0.8, weight: 6}]
-                },
-                showAlternatives: true,
-                show: false, // Hide default itinerary text
-                addWaypoints: false,
-                draggableWaypoints: false,
-                fitSelectedRoutes: false,
-                createMarker: function() { return null; } 
+        fetch(routeUrl(points), { signal: osrmAbortController.signal })
+            .then(r => r.json())
+            .then(data => {
+                if (!data || !data.routes || data.routes.length === 0) return;
+                currentRoutes = {
+                    routes: data.routes,
+                    orderedStops
+                };
+                const bestIndex = data.routes.reduce((bestIdx, route, idx) => {
+                    if (bestIdx === -1) return idx;
+                    return route.duration < data.routes[bestIdx].duration ? idx : bestIdx;
+                }, -1);
+                selectedRouteIndex = bestIndex >= 0 ? bestIndex : 0;
+                drawRouteAlternatives();
+                updateEtaFromSelectedRoute();
             })
-            .on('routesfound', function(e) {
-                const routes = e.routes;
-                if (!routes || routes.length === 0) return;
+            .catch(err => {
+                if (err && err.name === 'AbortError') return;
+                console.warn('Routing error:', err);
+            });
+    }
 
-                const route = routes[0];
-                const legs = route.legs; // Leg 0 is Driver -> 1st Stop
-                
-                let cumulativeTime = 0;
-                let cumulativeDistance = 0;
+    function drawRouteAlternatives() {
+        if (!map || !currentRoutes || !currentRoutes.routes) return;
+        clearLayers(routePolylines);
+        clearLayers(routeLabels);
 
-                // Clear previous ETAs
-                document.querySelectorAll('.eta-display').forEach(el => el.innerHTML = '');
+        const routes = currentRoutes.routes;
 
-                if (legs) {
-                    legs.forEach((leg, index) => {
-                        if (index >= orderedStops.length) return;
+        routes.forEach((route, idx) => {
+            if (!route.geometry || !route.geometry.coordinates) return;
 
-                        const stop = orderedStops[index];
-                        cumulativeTime += leg.summary.totalTime; // seconds
-                        cumulativeDistance += leg.summary.totalDistance; // meters
+            const latLngs = route.geometry.coordinates.map(c => L.latLng(c[1], c[0]));
+            const isSelected = idx === selectedRouteIndex;
 
-                        // Update Trip Card
-                        const tripCard = document.querySelector(`.card[data-trip-id="${stop.tripId}"]`);
-                        if (tripCard) {
-                            // Create or find ETA container
-                            let etaContainer = tripCard.querySelector('.eta-info');
-                            if (!etaContainer) {
-                                const div = document.createElement('div');
-                                div.className = 'eta-info mt-2 pt-2 border-t border-slate-100 dark:border-zink-600 flex justify-between items-center text-sm';
-                                tripCard.querySelector('.card-body').appendChild(div);
-                                etaContainer = div;
-                            }
+            const polyline = L.polyline(latLngs, {
+                color: isSelected ? '#4f46e5' : '#60a5fa',
+                opacity: isSelected ? 0.9 : 0.45,
+                weight: isSelected ? 7 : 5
+            }).addTo(map);
 
-                            const timeString = Math.round(cumulativeTime / 60) + ' min';
-                            const distString = (cumulativeDistance / 1000).toFixed(1) + ' km';
+            polyline.on('click', function () {
+                selectedRouteIndex = idx;
+                drawRouteAlternatives();
+                updateEtaFromSelectedRoute();
+            });
 
-                            // Determine label based on stop type
-                            const label = stop.type === 'pickup' ? 'Pickup in' : 'Dropoff in';
-                            
-                            let specificSlot = etaContainer.querySelector(`.eta-${stop.type}`);
-                            if (!specificSlot) {
-                                specificSlot = document.createElement('span');
-                                specificSlot.className = `eta-${stop.type} px-2 py-1 rounded bg-slate-100 dark:bg-zink-600 text-slate-600 dark:text-zink-200`;
-                                etaContainer.appendChild(specificSlot);
-                            }
+            routePolylines.push(polyline);
 
-                            specificSlot.innerHTML = `<b>${label}:</b> ${timeString} (${distString})`;
-                        }
-                    });
-                }
-            })
-            .on('routingerror', function(e) {
-                console.warn('Routing error:', e);
-            })
-            .addTo(map);
-        } catch (err) {
-            console.error("Failed to initialize routing control", err);
-        }
+            const minutes = Math.round(route.duration / 60);
+            const km = (route.distance / 1000).toFixed(1);
+            const mid = latLngs[Math.floor(latLngs.length / 2)];
+
+            if (mid) {
+                const labelIcon = L.divIcon({
+                    className: 'custom-div-icon',
+                    html: `<div style="background: rgba(255,255,255,0.95); border: 1px solid rgba(148,163,184,0.9); padding: 4px 8px; border-radius: 9999px; font-size: 12px; font-weight: 700; color: #0f172a; box-shadow: 0 1px 8px rgba(0,0,0,0.08);">${minutes} min • ${km} km</div>`,
+                    iconSize: [0, 0],
+                    iconAnchor: [0, 0]
+                });
+                const labelMarker = L.marker(mid, { icon: labelIcon, interactive: false }).addTo(map);
+                routeLabels.push(labelMarker);
+            }
+        });
+    }
+
+    function updateEtaFromSelectedRoute() {
+        if (!currentRoutes || !currentRoutes.routes || !currentRoutes.orderedStops) return;
+        const route = currentRoutes.routes[selectedRouteIndex];
+        if (!route || !route.legs) return;
+
+        document.querySelectorAll('.eta-display').forEach(el => el.innerHTML = '');
+
+        let cumulativeTime = 0;
+        let cumulativeDistance = 0;
+
+        route.legs.forEach((leg, index) => {
+            if (index >= currentRoutes.orderedStops.length) return;
+            const stop = currentRoutes.orderedStops[index];
+
+            cumulativeTime += leg.duration;
+            cumulativeDistance += leg.distance;
+
+            const tripCard = document.querySelector(`.card[data-trip-id="${stop.tripId}"]`);
+            if (!tripCard) return;
+
+            let etaContainer = tripCard.querySelector('.eta-info');
+            if (!etaContainer) {
+                const div = document.createElement('div');
+                div.className = 'eta-info mt-2 pt-2 border-t border-slate-100 dark:border-zink-600 flex justify-between items-center text-sm';
+                tripCard.appendChild(div);
+                etaContainer = div;
+            } else {
+                etaContainer.innerHTML = '';
+            }
+
+            const timeString = Math.round(cumulativeTime / 60) + ' min';
+            const distString = (cumulativeDistance / 1000).toFixed(1) + ' km';
+            const label = stop.type === 'pickup' ? 'Pickup in' : 'Drop-off in';
+
+            const specificSlot = document.createElement('span');
+            specificSlot.className = `eta-${stop.type} px-2 py-1 rounded bg-slate-100 dark:bg-zink-600 text-slate-600 dark:text-zink-200`;
+            specificSlot.innerHTML = `<b>${label}:</b> ${timeString} (${distString})`;
+            etaContainer.appendChild(specificSlot);
+        });
     }
 
     function showLocationError() {
@@ -440,6 +606,14 @@
     document.addEventListener('DOMContentLoaded', () => {
         initMap();
 
+        document.querySelectorAll('details[data-run-key]').forEach(d => {
+            d.addEventListener('toggle', () => {
+                if (d.open) {
+                    setActiveRun(d.dataset.runKey);
+                }
+            });
+        });
+
         // Start Location Tracking
         if (navigator.geolocation) {
             // Initial check
@@ -448,6 +622,7 @@
                 
                 // Update Driver Marker
                 const driverLatLng = L.latLng(latitude, longitude);
+                lastDriverLatLng = driverLatLng;
                 
                 if (map) {
                     const driverIcon = L.divIcon({
@@ -461,7 +636,8 @@
                     driverMarker = L.marker(driverLatLng, {icon: driverIcon}).addTo(map).bindPopup("You");
                     
                     // Update Route
-                    updateRouting(driverLatLng);
+                    renderStops();
+                    renderRoutes(driverLatLng);
                 }
 
                 // Send to Backend
@@ -472,8 +648,8 @@
                 if (error.code === 1) {
                     geoPermissionDenied = true;
                     showLocationError();
-                    // Initialize route without driver location
-                    updateRouting(null); 
+                    renderStops();
+                    renderRoutes(null);
                 }
             });
 
@@ -483,6 +659,7 @@
 
                 navigator.geolocation.getCurrentPosition(position => {
                     const { latitude, longitude } = position.coords;
+                    lastDriverLatLng = L.latLng(latitude, longitude);
                     
                     // Update UI Marker
                     if (map && driverMarker) {
@@ -498,6 +675,8 @@
                         driverMarker = L.marker([latitude, longitude], {icon: driverIcon}).addTo(map).bindPopup("You");
                     }
 
+                    renderRoutes(lastDriverLatLng);
+
                     // Send to Backend
                     updateBackendLocation(latitude, longitude);
 
@@ -510,7 +689,8 @@
             }, 15000); // 15 seconds
         } else {
             showLocationError();
-            updateRouting(null);
+            renderStops();
+            renderRoutes(null);
         }
     });
 

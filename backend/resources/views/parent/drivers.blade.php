@@ -6,7 +6,7 @@
         
         <div class="flex flex-col gap-4 mb-6 md:flex-row md:items-center md:justify-between">
             <div>
-                <h5 class="text-xl font-bold text-slate-900 dark:text-zink-50">Available Drivers</h5>
+                <h5 class="text-xl font-bold text-slate-900 dark:text-zink-50">Drivers for {{ $child->first_name }} {{ $child->last_name }}</h5>
                 <p class="text-slate-500 dark:text-zink-200 mt-1">Select a trusted driver for <span class="font-semibold text-slate-800 dark:text-zink-100">{{ $child->first_name }}</span></p>
             </div>
             <div>

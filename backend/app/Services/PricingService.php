@@ -36,10 +36,7 @@ class PricingService
             $oneWayKm = $roundTripKm / 2;
 
             // Pricing Logic:
-            // <= 10km one-way (or some threshold) -> $28
-            // > 10km one-way -> $45
-            
-            if ($oneWayKm <= 10) {
+            if ($oneWayKm <= 15) {
                 return [
                     'tier' => 1,
                     'price' => 28,
