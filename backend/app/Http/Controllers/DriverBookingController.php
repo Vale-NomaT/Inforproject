@@ -7,6 +7,7 @@ use App\Models\BookingRequest;
 use App\Models\DriverProfile;
 use App\Models\Trip;
 use App\Notifications\BookingStatusNotification;
+use App\Services\PricingService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
@@ -14,6 +15,13 @@ use Illuminate\View\View;
 
 class DriverBookingController extends Controller
 {
+    protected PricingService $pricingService;
+
+    public function __construct(PricingService $pricingService)
+    {
+        $this->pricingService = $pricingService;
+    }
+
     public function index(Request $request): View
     {
         $bookings = BookingRequest::where('driver_id', $request->user()->id)
@@ -21,6 +29,25 @@ class DriverBookingController extends Controller
             ->with(['child.school', 'child.pickupLocation', 'parent.parentProfile'])
             ->orderByDesc('created_at')
             ->get();
+
+        // Correct pricing for pending bookings if needed (e.g. if distance calc was fixed)
+        foreach ($bookings as $booking) {
+            if ($booking->child && $booking->child->pickupLocation && $booking->child->school) {
+                try {
+                    $pricing = $this->pricingService->determinePricing(
+                        $booking->child->pickupLocation,
+                        $booking->child->school
+                    );
+                    
+                    if ($booking->pricing_tier !== $pricing['tier']) {
+                        $booking->pricing_tier = $pricing['tier'];
+                        $booking->save(); // Update DB record so approval uses correct tier
+                    }
+                } catch (\Exception $e) {
+                    // Ignore calculation errors, keep existing tier
+                }
+            }
+        }
 
         $approvedBookings = BookingRequest::where('driver_id', $request->user()->id)
             ->where('status', BookingRequest::STATUS_APPROVED)
