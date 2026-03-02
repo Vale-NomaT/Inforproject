@@ -131,6 +131,14 @@
 
     tiles.addTo(map);
 
+    // Car Icon Definition
+    const carIcon = L.icon({
+        iconUrl: 'https://cdn-icons-png.flaticon.com/512/3202/3202926.png', // Generic Car Icon
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+        popupAnchor: [0, -20]
+    });
+
     let marker = null;
     let pathLine = null;
     let routingControl = null;
@@ -254,7 +262,7 @@
         pathLine = L.polyline(pathPoints, {color: '#2563eb', weight: 4}).addTo(map);
         const lastPoint = pathPoints[pathPoints.length - 1];
         if (!marker) {
-            marker = L.marker(lastPoint).addTo(map);
+            marker = L.marker(lastPoint, {icon: carIcon}).addTo(map);
         } else {
             marker.setLatLng(lastPoint);
         }
@@ -346,7 +354,7 @@
                 }
 
                 if (!marker) {
-                    marker = L.marker([lat, lng]).addTo(map);
+                    marker = L.marker([lat, lng], {icon: carIcon}).addTo(map);
                 } else {
                     marker.setLatLng([lat, lng]);
                 }

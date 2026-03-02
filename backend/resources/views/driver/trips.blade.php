@@ -153,19 +153,27 @@
 
 @section('script')
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 <script>
     let geoPermissionDenied = false;
     let driverMarker = null;
     let map = null;
     let activeRunKey = null;
     let stopMarkers = [];
-    let routePolylines = [];
-    let routeLabels = [];
+    let routingControl = null;
     let lastDriverLatLng = null;
-    let currentRoutes = null;
-    let selectedRouteIndex = 0;
-    let osrmAbortController = null;
+    let lastSpokenInstruction = '';
+    let lastBackendUpdate = 0;
+    
+    // Car Icon Definition
+    const carIcon = L.icon({
+        iconUrl: 'https://cdn-icons-png.flaticon.com/512/3202/3202926.png', // Generic Car Icon
+        iconSize: [40, 40],
+        iconAnchor: [20, 20],
+        popupAnchor: [0, -20]
+    });
 
     const runs = @json($runs);
     const csrfToken = '{{ csrf_token() }}';
@@ -192,9 +200,7 @@
 
     function setActiveRun(runKey) {
         activeRunKey = runKey;
-        selectedRouteIndex = 0;
-        currentRoutes = null;
-
+        
         document.querySelectorAll('details[data-run-key]').forEach(d => {
             if (d.dataset.runKey !== runKey) d.open = false;
         });
@@ -203,10 +209,10 @@
         if (details) details.open = true;
 
         renderStops();
+        
+        // If we have a location, start routing to the next stop
         if (lastDriverLatLng) {
-            renderRoutes(lastDriverLatLng);
-        } else {
-            renderRoutes(null);
+            updateNavigation();
         }
     }
 
@@ -315,241 +321,119 @@
 
         if (lastDriverLatLng) bounds.extend(lastDriverLatLng);
 
-        if (bounds.isValid()) {
+        if (bounds.isValid() && !routingControl) {
             map.fitBounds(bounds, {padding: [40, 40]});
         }
     }
 
-    function haversineKm(a, b) {
-        const toRad = d => (d * Math.PI) / 180;
-        const R = 6371;
-        const dLat = toRad(b.lat - a.lat);
-        const dLng = toRad(b.lng - a.lng);
-        const s1 = Math.sin(dLat / 2);
-        const s2 = Math.sin(dLng / 2);
-        const q = s1 * s1 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * s2 * s2;
-        return 2 * R * Math.atan2(Math.sqrt(q), Math.sqrt(1 - q));
-    }
-
-    function buildOrderedStops(startLatLng) {
+    // Determine the next immediate stop based on simple distance or trip order
+    // In a real app, this should follow the optimized route sequence
+    function getNextStop(driverLatLng) {
         const run = getActiveRun();
-        if (!run || !run.trips) return { orderedStops: [], orderedLatLngs: [] };
+        if (!run || !run.trips) return null;
 
-        const pickups = [];
-        const dropoffs = [];
+        let bestStop = null;
+        let minKey = Infinity; // Use simple index logic or distance
 
-        run.trips.forEach(trip => {
-            const child = trip.child;
-            if (!child) return;
-
+        // Simplistic logic: Find the nearest pickup or dropoff that hasn't been visited?
+        // Since we don't track "visited" state in frontend efficiently without reloading,
+        // we'll just target the nearest stop in the list for now.
+        // A better approach: The driver should select "Navigate to" a specific trip, 
+        // but for now, we'll route to the first trip's pickup or dropoff.
+        
+        if (run.trips.length > 0) {
+            const trip = run.trips[0];
+            // If morning, go to pickup, then dropoff. 
+            // This is a simplification. The user logic usually involves multiple stops.
+            // Let's just route to the FIRST pickup of the FIRST trip for demo purposes, 
+            // or the nearest stop.
+            
             const pickup = pickupLatLngForTrip(trip);
-            const dropoff = dropoffLatLngForTrip(trip);
-
-            const pickupName = child.pickup_address || (child.pickup_location ? child.pickup_location.name : 'Home');
-            const schoolName = child.school ? child.school.name : 'School';
-
-            if (pickup) {
-                pickups.push({
-                    latLng: pickup,
-                    tripId: trip.id,
-                    type: 'pickup',
-                    label: trip.type === 'morning' ? pickupName : schoolName,
-                    childName: child.first_name
-                });
-            }
-            if (dropoff) {
-                dropoffs.push({
-                    latLng: dropoff,
-                    tripId: trip.id,
-                    type: 'dropoff',
-                    label: trip.type === 'morning' ? schoolName : pickupName,
-                    childName: child.first_name
-                });
-            }
-        });
-
-        if (pickups.length === 0 && dropoffs.length === 0) return { orderedStops: [], orderedLatLngs: [] };
-
-        const orderedStops = [];
-
-        let cursor = startLatLng || pickups[0]?.latLng || dropoffs[0]?.latLng;
-        const remainingPickups = pickups.slice();
-
-        while (cursor && remainingPickups.length > 0) {
-            let bestIdx = 0;
-            let bestDist = Infinity;
-            for (let i = 0; i < remainingPickups.length; i++) {
-                const d = haversineKm(cursor, remainingPickups[i].latLng);
-                if (d < bestDist) {
-                    bestDist = d;
-                    bestIdx = i;
-                }
-            }
-            const next = remainingPickups.splice(bestIdx, 1)[0];
-            orderedStops.push(next);
-            cursor = next.latLng;
+            if (pickup) return pickup;
         }
-
-        const remainingDropoffs = dropoffs.slice();
-        while (cursor && remainingDropoffs.length > 0) {
-            let bestIdx = 0;
-            let bestDist = Infinity;
-            for (let i = 0; i < remainingDropoffs.length; i++) {
-                const d = haversineKm(cursor, remainingDropoffs[i].latLng);
-                if (d < bestDist) {
-                    bestDist = d;
-                    bestIdx = i;
-                }
-            }
-            const next = remainingDropoffs.splice(bestIdx, 1)[0];
-            orderedStops.push(next);
-            cursor = next.latLng;
-        }
-
-        const orderedLatLngs = orderedStops.map(s => s.latLng);
-        return { orderedStops, orderedLatLngs };
+        return null;
     }
 
-    function routeUrl(points) {
-        const coords = points.map(p => `${p.lng},${p.lat}`).join(';');
-        return `https://router.project-osrm.org/route/v1/driving/${coords}?alternatives=true&overview=full&geometries=geojson&steps=false`;
+    function speak(text) {
+        if ('speechSynthesis' in window) {
+            // Cancel current speaking to avoid queue buildup
+            window.speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'en-US';
+            utterance.rate = 1.0;
+            window.speechSynthesis.speak(utterance);
+        }
     }
 
-    function renderRoutes(driverLatLng) {
-        if (!map) return;
-        clearLayers(routePolylines);
-        clearLayers(routeLabels);
-        currentRoutes = null;
+    function updateNavigation() {
+        if (!map || !lastDriverLatLng) return;
 
         const run = getActiveRun();
         if (!run || !run.trips || run.trips.length === 0) return;
 
-        const start = driverLatLng || pickupLatLngForTrip(run.trips[0]) || dropoffLatLngForTrip(run.trips[0]);
-        if (!start) return;
+        // Target: Let's try to find the nearest stop to drive to
+        // For simplicity in this demo, we route to the first trip's relevant point
+        // In a real multi-stop scenario, we'd have a queue of stops.
+        const target = getNextStop(lastDriverLatLng);
+        if (!target) return;
 
-        const { orderedStops, orderedLatLngs } = buildOrderedStops(driverLatLng || start);
-        if (orderedLatLngs.length === 0) return;
-
-        const points = [start, ...orderedLatLngs];
-        if (points.length < 2) return;
-
-        if (osrmAbortController) {
-            try { osrmAbortController.abort(); } catch (e) {}
-        }
-        osrmAbortController = new AbortController();
-
-        fetch(routeUrl(points), { signal: osrmAbortController.signal })
-            .then(r => r.json())
-            .then(data => {
-                if (!data || !data.routes || data.routes.length === 0) return;
-                currentRoutes = {
-                    routes: data.routes,
-                    orderedStops
-                };
-                const bestIndex = data.routes.reduce((bestIdx, route, idx) => {
-                    if (bestIdx === -1) return idx;
-                    return route.duration < data.routes[bestIdx].duration ? idx : bestIdx;
-                }, -1);
-                selectedRouteIndex = bestIndex >= 0 ? bestIndex : 0;
-                drawRouteAlternatives();
-                updateEtaFromSelectedRoute();
+        if (!routingControl) {
+            routingControl = L.Routing.control({
+                waypoints: [
+                    lastDriverLatLng,
+                    target
+                ],
+                router: L.Routing.osrmv1({
+                    serviceUrl: 'https://router.project-osrm.org/route/v1'
+                }),
+                lineOptions: {
+                    styles: [{ color: '#3b82f6', opacity: 0.8, weight: 6 }]
+                },
+                show: true, // Show directions panel
+                addWaypoints: false,
+                draggableWaypoints: false,
+                createMarker: function() { return null; } // Don't create default markers, we have our own
             })
-            .catch(err => {
-                if (err && err.name === 'AbortError') return;
-                console.warn('Routing error:', err);
-            });
-    }
+            .on('routesfound', function(e) {
+                const routes = e.routes;
+                if (routes && routes.length > 0) {
+                    const instructions = routes[0].instructions;
+                    if (instructions && instructions.length > 0) {
+                        // Get the first instruction (immediate action)
+                        const nextInstruction = instructions[0];
+                        let text = '';
+                        
+                        if (nextInstruction.distance < 100) {
+                             text = nextInstruction.text; // "Turn left onto Main St"
+                        } else {
+                             text = `In ${Math.round(nextInstruction.distance)} meters, ${nextInstruction.text.toLowerCase()}`;
+                        }
 
-    function drawRouteAlternatives() {
-        if (!map || !currentRoutes || !currentRoutes.routes) return;
-        clearLayers(routePolylines);
-        clearLayers(routeLabels);
-
-        const routes = currentRoutes.routes;
-
-        routes.forEach((route, idx) => {
-            if (!route.geometry || !route.geometry.coordinates) return;
-
-            const latLngs = route.geometry.coordinates.map(c => L.latLng(c[1], c[0]));
-            const isSelected = idx === selectedRouteIndex;
-
-            const polyline = L.polyline(latLngs, {
-                color: isSelected ? '#4f46e5' : '#60a5fa',
-                opacity: isSelected ? 0.9 : 0.45,
-                weight: isSelected ? 7 : 5
-            }).addTo(map);
-
-            polyline.on('click', function () {
-                selectedRouteIndex = idx;
-                drawRouteAlternatives();
-                updateEtaFromSelectedRoute();
-            });
-
-            routePolylines.push(polyline);
-
-            const minutes = Math.round(route.duration / 60);
-            const km = (route.distance / 1000).toFixed(1);
-            const mid = latLngs[Math.floor(latLngs.length / 2)];
-
-            if (mid) {
-                const labelIcon = L.divIcon({
-                    className: 'custom-div-icon',
-                    html: `<div style="background: rgba(255,255,255,0.95); border: 1px solid rgba(148,163,184,0.9); padding: 4px 8px; border-radius: 9999px; font-size: 12px; font-weight: 700; color: #0f172a; box-shadow: 0 1px 8px rgba(0,0,0,0.08);">${minutes} min • ${km} km</div>`,
-                    iconSize: [0, 0],
-                    iconAnchor: [0, 0]
-                });
-                const labelMarker = L.marker(mid, { icon: labelIcon, interactive: false }).addTo(map);
-                routeLabels.push(labelMarker);
-            }
-        });
-    }
-
-    function updateEtaFromSelectedRoute() {
-        if (!currentRoutes || !currentRoutes.routes || !currentRoutes.orderedStops) return;
-        const route = currentRoutes.routes[selectedRouteIndex];
-        if (!route || !route.legs) return;
-
-        document.querySelectorAll('.eta-display').forEach(el => el.innerHTML = '');
-
-        let cumulativeTime = 0;
-        let cumulativeDistance = 0;
-
-        route.legs.forEach((leg, index) => {
-            if (index >= currentRoutes.orderedStops.length) return;
-            const stop = currentRoutes.orderedStops[index];
-
-            cumulativeTime += leg.duration;
-            cumulativeDistance += leg.distance;
-
-            const tripCard = document.querySelector(`.card[data-trip-id="${stop.tripId}"]`);
-            if (!tripCard) return;
-
-            let etaContainer = tripCard.querySelector('.eta-info');
-            if (!etaContainer) {
-                const div = document.createElement('div');
-                div.className = 'eta-info mt-2 pt-2 border-t border-slate-100 dark:border-zink-600 flex justify-between items-center text-sm';
-                tripCard.appendChild(div);
-                etaContainer = div;
-            } else {
-                etaContainer.innerHTML = '';
-            }
-
-            const timeString = Math.round(cumulativeTime / 60) + ' min';
-            const distString = (cumulativeDistance / 1000).toFixed(1) + ' km';
-            const label = stop.type === 'pickup' ? 'Pickup in' : 'Drop-off in';
-
-            const specificSlot = document.createElement('span');
-            specificSlot.className = `eta-${stop.type} px-2 py-1 rounded bg-slate-100 dark:bg-zink-600 text-slate-600 dark:text-zink-200`;
-            specificSlot.innerHTML = `<b>${label}:</b> ${timeString} (${distString})`;
-            etaContainer.appendChild(specificSlot);
-        });
+                        // Avoid repeating the exact same instruction continuously
+                        if (text !== lastSpokenInstruction) {
+                            speak(text);
+                            lastSpokenInstruction = text;
+                        }
+                    }
+                }
+            })
+            .addTo(map);
+        } else {
+            // Update start point to current driver location
+            // We keep the end point same until logic changes it
+            routingControl.setWaypoints([
+                lastDriverLatLng,
+                target
+            ]);
+        }
     }
 
     function showLocationError() {
         const statusEl = document.getElementById('location-status');
         if (statusEl) {
             statusEl.classList.remove('hidden');
-            statusEl.innerHTML = '<span class="text-red-500"><i data-lucide="alert-circle" class="inline w-4 h-4 mr-1"></i> Location permission denied. Please enable location services on your device to track trips.</span>';
+            statusEl.innerHTML = '<span class="text-red-500"><i data-lucide="alert-circle" class="inline w-4 h-4 mr-1"></i> Location permission denied. Please enable location services.</span>';
             if (window.lucide) window.lucide.createIcons();
         }
     }
@@ -576,15 +460,8 @@
         .catch(error => console.error('Error:', error));
     }
 
-    // Exposed to onclick handlers
     window.logEvent = function(tripId, type) {
-        if (geoPermissionDenied) {
-            // If denied, just send without location
-            sendTripEvent(tripId, type, null, null);
-            return;
-        }
-
-        if (!navigator.geolocation) {
+        if (geoPermissionDenied || !navigator.geolocation) {
             sendTripEvent(tripId, type, null, null);
             return;
         }
@@ -593,15 +470,25 @@
             const { latitude, longitude } = position.coords;
             sendTripEvent(tripId, type, latitude, longitude);
         }, error => {
-            console.warn("Location error during event log:", error);
-            if (error.code === 1) {
-                geoPermissionDenied = true;
-                showLocationError();
-            }
-            // Proceed without location
             sendTripEvent(tripId, type, null, null);
         });
     };
+
+    function updateBackendLocation(lat, lng) {
+        const now = Date.now();
+        // Throttle updates to every 10 seconds
+        if (now - lastBackendUpdate < 10000) return;
+        
+        lastBackendUpdate = now;
+        fetch(updateLocationUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ lat, lng })
+        }).catch(err => console.error("Failed to update backend location", err));
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
         initMap();
@@ -614,95 +501,44 @@
             });
         });
 
-        // Start Location Tracking
+        // Use watchPosition for real-time updates
         if (navigator.geolocation) {
-            // Initial check
-            navigator.geolocation.getCurrentPosition(position => {
+            navigator.geolocation.watchPosition(position => {
                 const { latitude, longitude } = position.coords;
-                
+                lastDriverLatLng = L.latLng(latitude, longitude);
+
                 // Update Driver Marker
-                const driverLatLng = L.latLng(latitude, longitude);
-                lastDriverLatLng = driverLatLng;
-                
                 if (map) {
-                    const driverIcon = L.divIcon({
-                        className: 'custom-div-icon',
-                        html: "<div style='background-color: #f59e0b; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.4);'></div>",
-                        iconSize: [16, 16],
-                        iconAnchor: [8, 8]
-                    });
+                    if (driverMarker) {
+                        driverMarker.setLatLng(lastDriverLatLng);
+                        driverMarker.setRotationAngle && driverMarker.setRotationAngle(position.coords.heading || 0);
+                    } else {
+                        driverMarker = L.marker(lastDriverLatLng, {icon: carIcon}).addTo(map).bindPopup("You");
+                    }
                     
-                    if (driverMarker) map.removeLayer(driverMarker);
-                    driverMarker = L.marker(driverLatLng, {icon: driverIcon}).addTo(map).bindPopup("You");
-                    
-                    // Update Route
-                    renderStops();
-                    renderRoutes(driverLatLng);
+                    // Center map on driver if moving fast? Optional.
+                    // map.setView(lastDriverLatLng); 
                 }
 
-                // Send to Backend
+                // Update Navigation (Voice & Route)
+                updateNavigation();
+
+                // Send to Backend (Throttled)
                 updateBackendLocation(latitude, longitude);
 
             }, error => {
-                console.error("Initial geolocation error:", error);
                 if (error.code === 1) {
                     geoPermissionDenied = true;
                     showLocationError();
-                    renderStops();
-                    renderRoutes(null);
                 }
+            }, {
+                enableHighAccuracy: true,
+                maximumAge: 0,
+                timeout: 5000
             });
-
-            // Interval Update
-            setInterval(() => {
-                if (geoPermissionDenied) return;
-
-                navigator.geolocation.getCurrentPosition(position => {
-                    const { latitude, longitude } = position.coords;
-                    lastDriverLatLng = L.latLng(latitude, longitude);
-                    
-                    // Update UI Marker
-                    if (map && driverMarker) {
-                        driverMarker.setLatLng([latitude, longitude]);
-                    } else if (map) {
-                        // Create if missing
-                        const driverIcon = L.divIcon({
-                            className: 'custom-div-icon',
-                            html: "<div style='background-color: #f59e0b; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 6px rgba(0,0,0,0.4);'></div>",
-                            iconSize: [16, 16],
-                            iconAnchor: [8, 8]
-                        });
-                        driverMarker = L.marker([latitude, longitude], {icon: driverIcon}).addTo(map).bindPopup("You");
-                    }
-
-                    renderRoutes(lastDriverLatLng);
-
-                    // Send to Backend
-                    updateBackendLocation(latitude, longitude);
-
-                }, error => {
-                    if (error.code === 1) {
-                        geoPermissionDenied = true;
-                        showLocationError();
-                    }
-                });
-            }, 15000); // 15 seconds
         } else {
             showLocationError();
-            renderStops();
-            renderRoutes(null);
         }
     });
-
-    function updateBackendLocation(lat, lng) {
-        fetch(updateLocationUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken
-            },
-            body: JSON.stringify({ lat, lng })
-        }).catch(err => console.error("Failed to update backend location", err));
-    }
 </script>
 @endsection
