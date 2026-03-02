@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 
 class DriverTripController extends Controller
@@ -123,7 +124,11 @@ class DriverTripController extends Controller
             'created_at' => now(),
         ]);
 
-        Event::dispatch(new TripEventBroadcasted($event));
+        try {
+            Event::dispatch(new TripEventBroadcasted($event));
+        } catch (\Exception $e) {
+            Log::error('Broadcast failed in start trip: ' . $e->getMessage());
+        }
 
         $etaMins = $trip->distance_km ? ceil($trip->distance_km * 2) : null; // Approx 30km/h
         $etaMsg = $etaMins ? " ETA: ~{$etaMins} mins." : "";
@@ -166,7 +171,11 @@ class DriverTripController extends Controller
                 'created_at' => now(),
             ]);
 
-            Event::dispatch(new TripEventBroadcasted($event));
+            try {
+                Event::dispatch(new TripEventBroadcasted($event));
+            } catch (\Exception $e) {
+                Log::error('Broadcast failed in startRun: ' . $e->getMessage());
+            }
 
             $etaMins = $trip->distance_km ? ceil($trip->distance_km * 2) : null;
             $etaMsg = $etaMins ? " ETA: ~{$etaMins} mins." : "";
@@ -201,7 +210,11 @@ class DriverTripController extends Controller
             ->get();
 
         foreach ($activeTrips as $trip) {
-            Event::dispatch(new TripLocationUpdated($trip, (float) $data['lat'], (float) $data['lng']));
+            try {
+                Event::dispatch(new TripLocationUpdated($trip, (float) $data['lat'], (float) $data['lng']));
+            } catch (\Exception $e) {
+                Log::error('Broadcast failed in updateDriverLocation: ' . $e->getMessage());
+            }
         }
 
         return response()->json([
@@ -221,7 +234,11 @@ class DriverTripController extends Controller
             'lng' => ['required', 'numeric'],
         ]);
 
-        Event::dispatch(new TripLocationUpdated($trip, (float) $data['lat'], (float) $data['lng']));
+        try {
+            Event::dispatch(new TripLocationUpdated($trip, (float) $data['lat'], (float) $data['lng']));
+        } catch (\Exception $e) {
+            Log::error('Broadcast failed in updateLocation: ' . $e->getMessage());
+        }
 
         return response()->json([
             'status' => 'ok',
@@ -255,7 +272,11 @@ class DriverTripController extends Controller
             $trip->save();
         }
 
-        Event::dispatch(new TripEventBroadcasted($event));
+        try {
+            Event::dispatch(new TripEventBroadcasted($event));
+        } catch (\Exception $e) {
+            Log::error('Broadcast failed in logEvent: ' . $e->getMessage());
+        }
 
         if ($data['type'] === 'arrived') {
             $this->notifyParent($trip, 'Driver has arrived at the pickup location.');
@@ -317,6 +338,10 @@ class DriverTripController extends Controller
             return;
         }
 
-        $parentUser->notify(new TripUpdateNotification($message, $trip->id, $child->first_name . ' ' . $child->last_name));
+        try {
+            $parentUser->notify(new TripUpdateNotification($message, $trip->id, $child->first_name . ' ' . $child->last_name));
+        } catch (\Exception $e) {
+            Log::error('Notification failed in notifyParent: ' . $e->getMessage());
+        }
     }
 }

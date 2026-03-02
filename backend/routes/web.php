@@ -33,6 +33,18 @@ Route::get('/force-migrate-db', function () {
     }
 });
 
+Route::get('/clear-cache', function () {
+    try {
+        Artisan::call('route:clear');
+        Artisan::call('config:clear');
+        Artisan::call('cache:clear');
+        Artisan::call('view:clear');
+        return 'Cache cleared successfully';
+    } catch (\Exception $e) {
+        return 'Cache clear failed: ' . $e->getMessage();
+    }
+});
+
 Route::get('/login', [AuthenticatedSessionController::class, 'create'])
     ->name('login')
     ->middleware('guest');
@@ -163,11 +175,14 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/users', [AdminUserController::class, 'index'])
         ->name('admin.users.index');
 
-    Route::get('/admin/drivers', [AdminDriverController::class, 'index'])
-        ->name('admin.drivers.index');
-        
-    Route::get('/admin/drivers/{user}/verify', [AdminDriverController::class, 'verify'])
-        ->name('admin.drivers.verify');
+    Route::get('/admin/drivers/pending', [AdminDriverController::class, 'indexPending'])
+        ->name('admin.drivers.pending');
+
+    Route::post('/admin/drivers/{driver}/approve', [AdminDriverController::class, 'approve'])
+        ->name('admin.drivers.approve');
+
+    Route::post('/admin/drivers/{driver}/reject', [AdminDriverController::class, 'reject'])
+        ->name('admin.drivers.reject');
 
     Route::get('/admin/reports', [AdminReportController::class, 'index'])
         ->name('admin.reports.index');
