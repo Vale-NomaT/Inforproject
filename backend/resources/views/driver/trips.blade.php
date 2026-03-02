@@ -101,7 +101,7 @@
 
                                 <div class="flex items-center gap-2 md:justify-end">
                                     @if ($runStatus === \App\Models\Trip::STATUS_SCHEDULED)
-                                        <form method="POST" action="{{ route('driver.runs.start') }}" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').innerText = 'Starting...'; this.querySelector('button[type=submit]').classList.add('opacity-75', 'cursor-not-allowed');" onclick="event.stopPropagation()">
+                                        <form method="POST" action="{{ route('driver.trips.start') }}" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').innerText = 'Starting...'; this.querySelector('button[type=submit]').classList.add('opacity-75', 'cursor-not-allowed');" onclick="event.stopPropagation()">
                                             @csrf
                                             <input type="hidden" name="date" id="date-{{ $run['key'] }}" value="{{ $runDate }}">
                                             <input type="hidden" name="type" id="type-{{ $run['key'] }}" value="{{ $runType }}">
