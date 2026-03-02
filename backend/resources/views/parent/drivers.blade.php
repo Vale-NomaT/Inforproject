@@ -135,7 +135,7 @@
                                     </div>
                                 </div>
 
-                                <form method="POST" action="{{ route('parent.children.drivers.store', ['child' => $child->id]) }}" class="mt-auto" onsubmit="this.querySelector('button[type=submit]').disabled = true; this.querySelector('button[type=submit]').innerHTML = 'Requesting...';">
+                                <form method="POST" action="{{ route('parent.children.drivers.store', ['child' => $child->id]) }}" class="mt-auto booking-form">
                                     @csrf
                                     <input type="hidden" name="driver_id" value="{{ $driver->id }}">
                                     <button type="submit" class="w-full flex items-center justify-center gap-2 btn bg-custom-500 border-custom-500 hover:bg-custom-600 hover:border-custom-600 text-white shadow-md shadow-custom-500/20 py-2.5 font-medium transition-all hover:-translate-y-0.5">
@@ -151,4 +151,37 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const forms = document.querySelectorAll('.booking-form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                const btn = this.querySelector('button[type="submit"]');
+                
+                // Prevent duplicate submission if already submitting
+                if (this.dataset.submitting === 'true') {
+                    e.preventDefault();
+                    return;
+                }
+                
+                // Set submitting flag
+                this.dataset.submitting = 'true';
+                
+                // Disable button and update UI
+                if (btn) {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-75', 'cursor-not-allowed');
+                    btn.innerHTML = `
+                        <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>Requesting...</span>
+                    `;
+                }
+            });
+        });
+    });
+</script>
 @endsection
