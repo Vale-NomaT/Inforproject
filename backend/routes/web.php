@@ -19,8 +19,19 @@ use App\Http\Controllers\ParentRatingController;
 use App\Http\Controllers\ParentTripController;
 use App\Http\Controllers\LandingController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Artisan;
 
 Route::get('/', [LandingController::class, 'show'])->name('landing');
+
+// Temporary route to run migrations on Render free tier
+Route::get('/force-migrate-db', function () {
+    try {
+        Artisan::call('migrate', ['--force' => true]);
+        return 'Migration run successfully: <br><pre>' . Artisan::output() . '</pre>';
+    } catch (\Exception $e) {
+        return 'Migration failed: ' . $e->getMessage();
+    }
+});
 
 Route::get('/login', [AuthenticatedSessionController::class, 'create'])
     ->name('login')
@@ -101,6 +112,9 @@ Route::middleware(['auth', 'role:parent'])->group(function () {
 
     Route::post('/parent/trips/{trip}/rate', [ParentRatingController::class, 'store'])
         ->name('parent.trips.rate.store');
+    
+    Route::get('/parent/live-trips', [ParentTripController::class, 'live'])
+        ->name('parent.trips.live');
 });
 
 Route::get('/driver/dashboard', DriverDashboardController::class)
@@ -108,78 +122,50 @@ Route::get('/driver/dashboard', DriverDashboardController::class)
     ->middleware(['auth', 'role:driver']);
 
 Route::middleware(['auth', 'role:driver'])->group(function () {
+    Route::get('/driver/service-area', [DriverServiceController::class, 'create'])
+        ->name('driver.service.create');
+
+    Route::post('/driver/service-area', [DriverServiceController::class, 'store'])
+        ->name('driver.service.store');
+
     Route::get('/driver/bookings', [DriverBookingController::class, 'index'])
         ->name('driver.bookings.index');
 
-    Route::post('/driver/bookings/{booking}/approve', [DriverBookingController::class, 'approve'])
-        ->name('driver.bookings.approve');
-
-    Route::post('/driver/bookings/{booking}/decline', [DriverBookingController::class, 'decline'])
-        ->name('driver.bookings.decline');
+    Route::put('/driver/bookings/{booking}', [DriverBookingController::class, 'update'])
+        ->name('driver.bookings.update');
 
     Route::get('/driver/trips', [DriverTripController::class, 'index'])
         ->name('driver.trips.index');
 
-    Route::get('/driver/map', [DriverTripController::class, 'map'])
-        ->name('driver.map');
-
-    Route::get('/driver/trips/history', [DriverTripController::class, 'history'])
-        ->name('driver.trips.history');
-
-    Route::get('/driver/ratings', [App\Http\Controllers\DriverRatingController::class, 'index'])
-        ->name('driver.ratings.index');
-
-    Route::get('/driver/service-area', [DriverServiceController::class, 'edit'])
-        ->name('driver.service.edit');
-
-    Route::put('/driver/service-area', [DriverServiceController::class, 'update'])
-        ->name('driver.service.update');
-
-    Route::post('/driver/trips/{trip}/start', [DriverTripController::class, 'start'])
+    Route::post('/driver/trips/start', [DriverTripController::class, 'startRun'])
         ->name('driver.trips.start');
 
-    Route::post('/driver/runs/start', [DriverTripController::class, 'startRun'])
-        ->name('driver.runs.start');
+    Route::post('/driver/trips/{trip}/start', [DriverTripController::class, 'start'])
+        ->name('driver.trips.start-single');
+
+    Route::post('/driver/trips/{trip}/events', [DriverTripController::class, 'logEvent'])
+        ->name('driver.trips.events.store');
 
     Route::post('/driver/location', [DriverTripController::class, 'updateDriverLocation'])
         ->name('driver.location.update');
 
-    Route::post('/driver/trips/{trip}/location', [DriverTripController::class, 'updateLocation'])
-        ->name('driver.trips.location');
-
-    Route::post('/driver/trips/{trip}/events', [DriverTripController::class, 'logEvent'])
-        ->name('driver.trips.events');
+    Route::get('/driver/trips/completed', [DriverTripController::class, 'completed'])
+        ->name('driver.trips.completed');
 });
 
-Route::get('/admin/dashboard', AdminDashboardController::class)
-    ->name('admin.dashboard')
-    ->middleware(['auth', 'role:admin']);
+Route::middleware(['auth', 'role:admin'])->group(function () {
+    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])
+        ->name('admin.dashboard');
+        
+    Route::get('/admin/users', [AdminUserController::class, 'index'])
+        ->name('admin.users.index');
 
-Route::prefix('admin')
-    ->name('admin.')
-    ->middleware(['auth', 'role:admin'])
-    ->group(function () {
-        Route::get('/drivers/pending', [AdminDriverController::class, 'indexPending'])
-            ->name('drivers.pending');
+    Route::get('/admin/drivers', [AdminDriverController::class, 'index'])
+        ->name('admin.drivers.index');
+        
+    Route::get('/admin/drivers/{user}/verify', [AdminDriverController::class, 'verify'])
+        ->name('admin.drivers.verify');
 
-        Route::post('/drivers/{driver}/approve', [AdminDriverController::class, 'approve'])
-            ->name('drivers.approve');
-
-        Route::post('/drivers/{driver}/reject', [AdminDriverController::class, 'reject'])
-            ->name('drivers.reject');
-
-        Route::get('/users', [AdminUserController::class, 'index'])
-            ->name('users.index');
-
-        Route::post('/users/{user}/suspend', [AdminUserController::class, 'suspend'])
-            ->name('users.suspend');
-
-        Route::get('/reports/trips', [AdminReportController::class, 'trips'])
-            ->name('reports.trips');
-
-        Route::get('/reports/signups', [AdminReportController::class, 'signups'])
-            ->name('reports.signups');
-
-        Route::get('/reports/driver-performance', [AdminReportController::class, 'driverPerformance'])
-            ->name('reports.driver-performance');
-    });
+    Route::get('/admin/reports', [AdminReportController::class, 'index'])
+        ->name('admin.reports.index');
+});
