@@ -175,7 +175,7 @@ Route::middleware(['auth', 'role:driver'])->group(function () {
 });
 
 Route::middleware(['auth', 'role:admin'])->group(function () {
-    Route::get('/admin/dashboard', [AdminDashboardController::class, 'index'])
+    Route::get('/admin/dashboard', AdminDashboardController::class)
         ->name('admin.dashboard');
         
     Route::get('/admin/users', [AdminUserController::class, 'index'])
@@ -193,6 +193,12 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::post('/admin/drivers/{driver}/reject', [AdminDriverController::class, 'reject'])
         ->name('admin.drivers.reject');
 
-    Route::get('/admin/reports', [AdminReportController::class, 'index'])
-        ->name('admin.reports.index');
+    Route::get('/admin/reports/trips', [AdminReportController::class, 'trips'])
+        ->name('admin.reports.trips');
+    
+    Route::get('/admin/reports/signups', [AdminReportController::class, 'signups'])
+        ->name('admin.reports.signups');
+    
+    Route::get('/admin/reports/driver-performance', [AdminReportController::class, 'driverPerformance'])
+        ->name('admin.reports.driver-performance');
 });
