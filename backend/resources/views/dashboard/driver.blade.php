@@ -143,7 +143,7 @@
             </a>
 
             <a
-                href="{{ route('driver.service.edit') }}"
+                href="{{ route('driver.service.create') }}"
                 class="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-4 sm:p-6 shadow-sm hover:border-blue-500 hover:shadow-md transition dark:bg-zink-700 dark:border-zink-500"
             >
                 <div>

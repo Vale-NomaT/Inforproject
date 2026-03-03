@@ -167,8 +167,8 @@ Route::middleware(['auth', 'role:driver'])->group(function () {
     Route::post('/driver/location', [DriverTripController::class, 'updateDriverLocation'])
         ->name('driver.location.update');
 
-    Route::get('/driver/trips/completed', [DriverTripController::class, 'completed'])
-        ->name('driver.trips.completed');
+    Route::get('/driver/trips/history', [DriverTripController::class, 'history'])
+        ->name('driver.trips.history');
     
     Route::get('/driver/ratings', [App\Http\Controllers\DriverRatingController::class, 'index'])
         ->name('driver.ratings.index');
