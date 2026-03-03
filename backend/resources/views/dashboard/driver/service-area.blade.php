@@ -25,9 +25,8 @@
                     Define where you operate. Parents in these zones and schools will be able to see you.
                 </p>
 
-                <form action="{{ route('driver.service.update') }}" method="POST">
+                <form action="{{ route('driver.service.store') }}" method="POST">
                     @csrf
-                    @method('PUT')
 
                     <!-- Pickup Zones Section -->
                     <div class="mb-6">
