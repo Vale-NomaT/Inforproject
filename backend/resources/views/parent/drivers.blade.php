@@ -80,9 +80,11 @@
                                             <div class="flex items-center justify-center w-14 h-14 rounded-full bg-custom-100 text-custom-600 text-xl font-bold dark:bg-custom-500/20 dark:text-custom-400">
                                                 {{ $initials }}
                                             </div>
-                                            <div class="absolute -bottom-1 -right-1 flex items-center justify-center w-6 h-6 bg-green-500 border-2 border-white rounded-full dark:border-zink-700" title="Verified Driver">
-                                                <i data-lucide="check" class="w-3 h-3 text-white"></i>
-                                            </div>
+                                            @if ($driver->user && $driver->user->status === 'active')
+                                                <div class="absolute -bottom-1 -right-1 flex items-center justify-center w-6 h-6 bg-green-500 border-2 border-white rounded-full dark:border-zink-700" title="Verified Driver">
+                                                    <i data-lucide="check" class="w-3 h-3 text-white"></i>
+                                                </div>
+                                            @endif
                                         </div>
                                         <div>
                                             <h6 class="text-lg font-bold text-slate-900 dark:text-zink-50">

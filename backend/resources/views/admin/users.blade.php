@@ -87,6 +87,18 @@
                                     @endif
                                 </td>
                                 <td class="px-3.5 py-2.5 border-b border-slate-200 dark:border-zink-500 text-right">
+                                    @if ($user->user_type === 'driver' && $user->status === 'pending')
+                                        <form method="POST" action="{{ route('admin.drivers.approve', ['driver' => $user->id]) }}" class="inline-flex items-center justify-end gap-2 mr-2">
+                                            @csrf
+                                            <button
+                                                type="submit"
+                                                class="px-2 py-1 text-xs text-white btn bg-green-500 border-green-500 hover:text-white hover:bg-green-600 hover:border-green-600 focus:text-white focus:bg-green-600 focus:border-green-600 focus:ring focus:ring-green-100 active:text-white active:bg-green-600 active:border-green-600 active:ring active:ring-green-100 dark:ring-green-400/20"
+                                            >
+                                                Verify
+                                            </button>
+                                        </form>
+                                    @endif
+                                    
                                     @if ($user->status !== 'suspended')
                                         <form method="POST" action="{{ route('admin.users.suspend', ['user' => $user->id]) }}" class="flex items-center justify-end gap-2">
                                             @csrf
