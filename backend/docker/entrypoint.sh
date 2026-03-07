@@ -10,6 +10,9 @@ php artisan migrate --force
 echo "🏥 Checking for missing tables..."
 php artisan db:ensure-tables
 
+echo "🔗 Ensuring storage link exists..."
+php artisan storage:link
+
 # 2. Cache Configuration (Optional but recommended for production)
 # echo "⚙️ Caching configuration..."
 # php artisan config:cache
