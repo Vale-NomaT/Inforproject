@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\ParentProfile;
+use App\Models\DriverProfile;
 use App\Models\User;
 use App\Notifications\WelcomeNotification;
 use Illuminate\Auth\Events\Registered;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
+use Illuminate\Validation\Rules\Password;
 use Illuminate\View\View;
 
 class RegisteredUserController extends Controller
@@ -77,9 +79,16 @@ class RegisteredUserController extends Controller
             'vehicle_make' => ['required', 'string', 'max:100'],
             'vehicle_model' => ['required', 'string', 'max:50'],
             'max_child_capacity' => ['required', 'integer', 'min:1', 'max:50'],
+            'license_document' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+            'vehicle_registration_document' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
+            'gov_id_document' => ['required', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:2048'],
         ]);
 
-        $user = DB::transaction(function () use ($data) {
+        $licensePath = $request->file('license_document')->store('documents', 'public');
+        $vehicleRegPath = $request->file('vehicle_registration_document')->store('documents', 'public');
+        $govIdPath = $request->file('gov_id_document')->store('documents', 'public');
+
+        $user = DB::transaction(function () use ($data, $licensePath, $vehicleRegPath, $govIdPath) {
             $user = User::create([
                 'name' => $data['name'],
                 'email' => $data['email'],
@@ -96,6 +105,9 @@ class RegisteredUserController extends Controller
                 'vehicle_make' => $data['vehicle_make'] ?? null,
                 'vehicle_model' => $data['vehicle_model'] ?? null,
                 'max_child_capacity' => $data['max_child_capacity'],
+                'license_file_path' => $licensePath,
+                'vehicle_registration_file_path' => $vehicleRegPath,
+                'gov_id_file_path' => $govIdPath,
             ]);
 
             return $user;

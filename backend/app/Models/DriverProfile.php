@@ -29,6 +29,9 @@ class DriverProfile extends Model
         'license_plate',
         'max_child_capacity',
         'vehicle_type',
+        'license_file_path',
+        'vehicle_registration_file_path',
+        'gov_id_file_path',
     ];
 
     public function user()

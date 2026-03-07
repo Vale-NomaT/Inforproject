@@ -5,7 +5,7 @@
 @section('subheading', 'Join SafeRide Kids as a trusted driver.')
 
 @section('content')
-    <form method="POST" action="/register/driver" class="mt-4">
+    <form method="POST" action="/register/driver" class="mt-4" enctype="multipart/form-data">
         @csrf
 
         <div class="mb-3">
@@ -69,6 +69,30 @@
             <label for="max_child_capacity" class="inline-block mb-2 text-base font-medium text-slate-500 dark:text-zink-200">Max Child Capacity</label>
             <input type="number" id="max_child_capacity" name="max_child_capacity" min="1" max="50" class="form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 disabled:bg-slate-100 dark:disabled:bg-zink-600 disabled:border-slate-300 dark:disabled:border-zink-500 dark:disabled:text-zink-200 disabled:text-slate-500 dark:text-zink-100 dark:bg-zink-700 dark:focus:border-custom-800 placeholder:text-slate-400 dark:placeholder:text-zink-200 w-full rounded-md py-2 px-3" placeholder="e.g. 4" value="{{ old('max_child_capacity') }}" required>
             @error('max_child_capacity')
+                <div class="mt-1 text-sm text-red-500">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <div class="mb-3">
+            <label for="license_document" class="inline-block mb-2 text-base font-medium text-slate-500 dark:text-zink-200">Valid License Document</label>
+            <input type="file" id="license_document" name="license_document" class="form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 w-full rounded-md py-2 px-3" accept=".pdf,.jpg,.jpeg,.png" required>
+            @error('license_document')
+                <div class="mt-1 text-sm text-red-500">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <div class="mb-3">
+            <label for="vehicle_registration_document" class="inline-block mb-2 text-base font-medium text-slate-500 dark:text-zink-200">Vehicle Registration Document</label>
+            <input type="file" id="vehicle_registration_document" name="vehicle_registration_document" class="form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 w-full rounded-md py-2 px-3" accept=".pdf,.jpg,.jpeg,.png" required>
+            @error('vehicle_registration_document')
+                <div class="mt-1 text-sm text-red-500">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <div class="mb-3">
+            <label for="gov_id_document" class="inline-block mb-2 text-base font-medium text-slate-500 dark:text-zink-200">Valid ID Document</label>
+            <input type="file" id="gov_id_document" name="gov_id_document" class="form-input border-slate-200 dark:border-zink-500 focus:outline-none focus:border-custom-500 w-full rounded-md py-2 px-3" accept=".pdf,.jpg,.jpeg,.png" required>
+            @error('gov_id_document')
                 <div class="mt-1 text-sm text-red-500">{{ $message }}</div>
             @enderror
         </div>
