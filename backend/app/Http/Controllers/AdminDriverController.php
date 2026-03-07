@@ -46,7 +46,7 @@ class AdminDriverController extends Controller
             'reason' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $driver->status = 'suspended';
+        $driver->status = 'rejected';
         $driver->status_reason = $data['reason'] ?? null;
         $driver->save();
 
