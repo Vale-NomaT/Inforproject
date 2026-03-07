@@ -236,4 +236,64 @@ window.addEventListener('click', function (e) {
     isShowDropMenu = false;
 });
 
+// Choices.js Initialization
+document.addEventListener("DOMContentLoaded", function () {
+    var choicesList = document.querySelectorAll("[data-choices]");
+    Array.from(choicesList).forEach(function (item) {
+        var choiceData = {};
+        var isChoicesVal = item.attributes;
+        if (isChoicesVal["data-choices-groups"]) {
+            choiceData.placeholderValue = "This is a placeholder set in the config";
+        }
+        if (isChoicesVal["data-choices-search-false"]) {
+            choiceData.searchEnabled = false;
+        }
+        if (isChoicesVal["data-choices-search-true"]) {
+            choiceData.searchEnabled = true;
+        }
+        if (isChoicesVal["data-choices-removeItem"]) {
+            choiceData.removeItemButton = true;
+        }
+        if (isChoicesVal["data-choices-sorting-false"]) {
+            choiceData.shouldSort = false;
+        }
+        if (isChoicesVal["data-choices-sorting-true"]) {
+            choiceData.shouldSort = true;
+        }
+        if (isChoicesVal["data-choices-multiple-remove"]) {
+            choiceData.removeItemButton = true;
+        }
+        if (isChoicesVal["data-choices-limit"]) {
+            choiceData.maxItemCount = isChoicesVal["data-choices-limit"].value.toString();
+        }
+        if (isChoicesVal["data-choices-editItem-true"]) {
+            choiceData.maxItemCount = true;
+        }
+        if (isChoicesVal["data-choices-editItem-false"]) {
+            choiceData.maxItemCount = false;
+        }
+        if (isChoicesVal["data-choices-text-unique-true"]) {
+            choiceData.duplicateItemsAllowed = false;
+        }
+        if (isChoicesVal["data-choices-text-disabled-true"]) {
+            choiceData.addItems = false;
+        }
 
+        // Check if already initialized (by checking for choices__input class or similar structure added by Choices)
+        // Choices.js adds a div with class 'choices' around the select, and hides the original select.
+        // The original select (item) is hidden.
+        // If it's already initialized, the parent should be a div with class 'choices'.
+        // Or checking if 'choices__input' exists nearby.
+        // A simpler check is if the item has 'choices__input' class? No, the input is separate.
+        // Choices.js hides the original element.
+        // Let's check if the element is visible.
+        // Or check if the parent has class 'choices'.
+        
+        var parent = item.closest('.choices');
+        if (!parent) {
+             if (typeof Choices === 'function') {
+                isChoicesVal["data-choices-text-disabled-true"] ? new Choices(item, choiceData).disable() : new Choices(item, choiceData);
+             }
+        }
+    });
+});
