@@ -26,7 +26,7 @@ class DriverDocumentUpdateTest extends TestCase
         $response = $this->actingAs($driver)->get('/driver/dashboard');
 
         $response->assertStatus(200);
-        $response->assertSee('Account Status: Rejected');
+        $response->assertSee('Account Status: Suspended');
         $response->assertSee('Invalid License');
         $response->assertSee('Update Documents');
     }

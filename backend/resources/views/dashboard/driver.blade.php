@@ -23,7 +23,7 @@
                     @else
                         <i data-lucide="clock" class="w-5 h-5"></i>
                     @endif
-                    <h3 class="text-lg font-semibold">Account Status: {{ ucfirst(auth()->user()->status) }}</h3>
+                    <h3 class="text-lg font-semibold">Account Status: {{ auth()->user()->status === 'rejected' ? 'Suspended' : ucfirst(auth()->user()->status) }}</h3>
                 </div>
                 @if (auth()->user()->status === 'rejected' && auth()->user()->status_reason)
                     <p class="mt-2 text-sm">
@@ -40,7 +40,7 @@
             </div>
         @endif
 
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-4 sm:grid-cols-2 @if(auth()->user()->status !== 'active') opacity-50 pointer-events-none select-none grayscale @endif">
             <div class="card">
                 <div class="card-body">
                     <div class="flex items-center justify-between mb-4">
