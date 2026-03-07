@@ -26,10 +26,9 @@
                 <table class="w-full whitespace-nowrap">
                     <thead class="bg-slate-100 dark:bg-zink-600">
                         <tr>
-                            <th class="px-3.5 py-2.5 font-semibold border-b border-slate-200 dark:border-zink-500 ltr:text-left rtl:text-right text-slate-500 dark:text-zink-200">Name</th>
-                            <th class="px-3.5 py-2.5 font-semibold border-b border-slate-200 dark:border-zink-500 ltr:text-left rtl:text-right text-slate-500 dark:text-zink-200">Email</th>
-                            <th class="px-3.5 py-2.5 font-semibold border-b border-slate-200 dark:border-zink-500 ltr:text-left rtl:text-right text-slate-500 dark:text-zink-200">Vehicle</th>
-                            <th class="px-3.5 py-2.5 font-semibold border-b border-slate-200 dark:border-zink-500 ltr:text-left rtl:text-right text-slate-500 dark:text-zink-200">License</th>
+                            <th class="px-3.5 py-2.5 font-semibold border-b border-slate-200 dark:border-zink-500 ltr:text-left rtl:text-right text-slate-500 dark:text-zink-200">Name / DOB</th>
+                            <th class="px-3.5 py-2.5 font-semibold border-b border-slate-200 dark:border-zink-500 ltr:text-left rtl:text-right text-slate-500 dark:text-zink-200">Contact</th>
+                            <th class="px-3.5 py-2.5 font-semibold border-b border-slate-200 dark:border-zink-500 ltr:text-left rtl:text-right text-slate-500 dark:text-zink-200">Vehicle Details</th>
                             <th class="px-3.5 py-2.5 font-semibold border-b border-slate-200 dark:border-zink-500 ltr:text-left rtl:text-right text-slate-500 dark:text-zink-200">Documents</th>
                             <th class="px-3.5 py-2.5 font-semibold border-b border-slate-200 dark:border-zink-500 ltr:text-right rtl:text-left text-slate-500 dark:text-zink-200">Actions</th>
                         </tr>
@@ -38,24 +37,49 @@
                         @foreach ($drivers as $driver)
                             @php $profile = $driver->driverProfile; @endphp
                             <tr>
-                                <td class="px-3.5 py-2.5 border-y border-slate-200 dark:border-zink-500 dark:text-zink-100">{{ $driver->name }}</td>
-                                <td class="px-3.5 py-2.5 border-y border-slate-200 dark:border-zink-500 dark:text-zink-100">{{ $driver->email }}</td>
+                                <td class="px-3.5 py-2.5 border-y border-slate-200 dark:border-zink-500 dark:text-zink-100">
+                                    <div class="font-medium">{{ $driver->name }}</div>
+                                    @if ($profile && $profile->date_of_birth)
+                                        <div class="text-xs text-slate-500">DOB: {{ $profile->date_of_birth }}</div>
+                                    @endif
+                                </td>
+                                <td class="px-3.5 py-2.5 border-y border-slate-200 dark:border-zink-500 dark:text-zink-100">
+                                    <div class="text-sm">{{ $driver->email }}</div>
+                                </td>
                                 <td class="px-3.5 py-2.5 border-y border-slate-200 dark:border-zink-500 dark:text-zink-100">
                                     @if ($profile)
-                                        {{ $profile->vehicle_make }} {{ $profile->vehicle_model }}
-                                        <small class="block text-slate-500 dark:text-slate-400">{{ $profile->vehicle_color }} {{ $profile->vehicle_year }}</small>
+                                        <div class="font-medium">{{ $profile->vehicle_make }} {{ $profile->vehicle_model }}</div>
+                                        <div class="text-xs text-slate-500">Plate: {{ $profile->license_plate }}</div>
+                                        <div class="text-xs text-slate-500">Capacity: {{ $profile->max_child_capacity }} kids</div>
                                     @else
                                         <span class="text-slate-400">Not provided</span>
                                     @endif
                                 </td>
-                                <td class="px-3.5 py-2.5 border-y border-slate-200 dark:border-zink-500 dark:text-zink-100">
-                                    {{ $profile ? $profile->license_number : 'Not provided' }}
-                                </td>
                                 <td class="px-3.5 py-2.5 border-y border-slate-200 dark:border-zink-500">
-                                    <div class="flex flex-col gap-1">
-                                        <a href="#" class="text-xs font-medium text-custom-500 hover:text-custom-600">View ID</a>
-                                        <a href="#" class="text-xs font-medium text-custom-500 hover:text-custom-600">View License</a>
-                                    </div>
+                                    @if ($profile)
+                                        <div class="flex flex-col gap-1">
+                                            @if($profile->license_file_path)
+                                                <a href="{{ Storage::url($profile->license_file_path) }}" target="_blank" class="text-xs font-medium text-custom-500 hover:text-custom-600 flex items-center gap-1">
+                                                    <i data-lucide="file-text" class="size-3"></i> License
+                                                </a>
+                                            @endif
+                                            @if($profile->vehicle_registration_file_path)
+                                                <a href="{{ Storage::url($profile->vehicle_registration_file_path) }}" target="_blank" class="text-xs font-medium text-custom-500 hover:text-custom-600 flex items-center gap-1">
+                                                    <i data-lucide="car" class="size-3"></i> Registration
+                                                </a>
+                                            @endif
+                                            @if($profile->gov_id_file_path)
+                                                <a href="{{ Storage::url($profile->gov_id_file_path) }}" target="_blank" class="text-xs font-medium text-custom-500 hover:text-custom-600 flex items-center gap-1">
+                                                    <i data-lucide="credit-card" class="size-3"></i> Gov ID
+                                                </a>
+                                            @endif
+                                            <div class="text-xs text-slate-500 mt-1">
+                                                License #: {{ $profile->license_number }}
+                                            </div>
+                                        </div>
+                                    @else
+                                        <span class="text-slate-400">No documents</span>
+                                    @endif
                                 </td>
                                 <td class="px-3.5 py-2.5 border-y border-slate-200 dark:border-zink-500 text-right">
                                     <div class="flex justify-end gap-2">
