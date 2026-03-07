@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::table('users', function (Blueprint $table) {
             $table->enum('role', ['parent', 'driver', 'admin'])->default('parent')->after('password');
-            $table->enum('status', ['pending', 'active', 'suspended'])->default('pending')->after('role');
+            $table->enum('status', ['pending', 'active', 'suspended', 'rejected'])->default('pending')->after('role');
         });
     }
 

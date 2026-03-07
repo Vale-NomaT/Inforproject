@@ -10,6 +10,7 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\DriverBookingController;
 use App\Http\Controllers\DriverDashboardController;
+use App\Http\Controllers\DriverDocumentController;
 use App\Http\Controllers\DriverServiceController;
 use App\Http\Controllers\DriverTripController;
 use App\Http\Controllers\ParentChildController;
@@ -142,6 +143,12 @@ Route::middleware(['auth', 'role:driver'])->group(function () {
 
     Route::post('/driver/service-area', [DriverServiceController::class, 'store'])
         ->name('driver.service.store');
+
+    Route::get('/driver/documents', [DriverDocumentController::class, 'edit'])
+        ->name('driver.documents.edit');
+
+    Route::post('/driver/documents', [DriverDocumentController::class, 'update'])
+        ->name('driver.documents.update');
 
     Route::get('/driver/bookings', [DriverBookingController::class, 'index'])
         ->name('driver.bookings.index');

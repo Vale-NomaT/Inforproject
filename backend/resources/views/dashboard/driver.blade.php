@@ -15,6 +15,31 @@
             </ul>
         </div>
 
+        @if (auth()->user()->status !== 'active')
+            <div class="mb-4 p-4 rounded-md @if(auth()->user()->status === 'rejected') bg-red-50 text-red-800 dark:bg-red-500/20 dark:text-red-500 @else bg-yellow-50 text-yellow-800 dark:bg-yellow-500/20 dark:text-yellow-500 @endif">
+                <div class="flex items-center gap-2">
+                    @if(auth()->user()->status === 'rejected')
+                        <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                    @else
+                        <i data-lucide="clock" class="w-5 h-5"></i>
+                    @endif
+                    <h3 class="text-lg font-semibold">Account Status: {{ ucfirst(auth()->user()->status) }}</h3>
+                </div>
+                @if (auth()->user()->status === 'rejected' && auth()->user()->status_reason)
+                    <p class="mt-2 text-sm">
+                        <strong>Reason:</strong> {{ auth()->user()->status_reason }}
+                    </p>
+                @endif
+                @if (in_array(auth()->user()->status, ['pending', 'rejected']))
+                    <div class="mt-4">
+                        <a href="{{ route('driver.documents.edit') }}" class="px-4 py-2 text-sm font-medium text-white transition-all duration-200 ease-linear rounded-md bg-custom-500 hover:bg-custom-600 focus:ring focus:ring-custom-100">
+                            Update Documents
+                        </a>
+                    </div>
+                @endif
+            </div>
+        @endif
+
         <div class="grid gap-4 sm:grid-cols-2">
             <div class="card">
                 <div class="card-body">
