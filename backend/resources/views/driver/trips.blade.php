@@ -152,6 +152,10 @@
                                                     <span class="px-2.5 py-0.5 text-xs inline-block font-medium rounded border border-slate-200 bg-slate-100 text-slate-500 dark:bg-slate-500/20 dark:border-slate-500/20">
                                                         Completed
                                                     </span>
+                                                @elseif ($trip->status === 'cancelled')
+                                                    <span class="px-2.5 py-0.5 text-xs inline-block font-medium rounded border border-red-200 bg-red-100 text-red-600 dark:bg-red-500/20 dark:border-red-500/20">
+                                                        ⚠ Absent
+                                                    </span>
                                                 @endif
                                             </div>
                                         </div>

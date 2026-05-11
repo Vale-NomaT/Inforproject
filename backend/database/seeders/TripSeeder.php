@@ -98,25 +98,29 @@ class TripSeeder extends Seeder
 
         // Driver Performance Scores
         if ($driverA) {
-            DriverPerformanceScore::create([
-                'driver_id' => $driverA->id,
-                'avg_rating' => 4.5,
-                'punctuality' => 0.95,
-                'reliability' => 0.98,
-                'score' => 96.5,
-                'calculated_at' => now(),
-            ]);
+            DriverPerformanceScore::firstOrCreate(
+                ['driver_id' => $driverA->id],
+                [
+                    'avg_rating' => 4.5,
+                    'punctuality' => 0.95,
+                    'reliability' => 0.98,
+                    'score' => 96.5,
+                    'calculated_at' => now(),
+                ]
+            );
         }
 
         if ($driverB) {
-            DriverPerformanceScore::create([
-                'driver_id' => $driverB->id,
-                'avg_rating' => 5.0,
-                'punctuality' => 1.0,
-                'reliability' => 1.0,
-                'score' => 100.0,
-                'calculated_at' => now(),
-            ]);
+            DriverPerformanceScore::firstOrCreate(
+                ['driver_id' => $driverB->id],
+                [
+                    'avg_rating' => 5.0,
+                    'punctuality' => 1.0,
+                    'reliability' => 1.0,
+                    'score' => 100.0,
+                    'calculated_at' => now(),
+                ]
+            );
         }
     }
 

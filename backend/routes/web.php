@@ -13,6 +13,7 @@ use App\Http\Controllers\DriverDashboardController;
 use App\Http\Controllers\DriverDocumentController;
 use App\Http\Controllers\DriverServiceController;
 use App\Http\Controllers\DriverTripController;
+use App\Http\Controllers\ParentAbsenceController;
 use App\Http\Controllers\ParentChildController;
 use App\Http\Controllers\ParentDashboardController;
 use App\Http\Controllers\ParentDriverController;
@@ -131,6 +132,14 @@ Route::middleware(['auth', 'role:parent'])->group(function () {
     
     Route::get('/parent/live-trips', [ParentTripController::class, 'live'])
         ->name('parent.trips.live');
+
+    // Absence management
+    Route::get('/parent/children/{child}/absences', [ParentAbsenceController::class, 'index'])
+        ->name('parent.absences.index');
+    Route::post('/parent/children/{child}/absences', [ParentAbsenceController::class, 'store'])
+        ->name('parent.absences.store');
+    Route::delete('/parent/children/{child}/absences/{absence}', [ParentAbsenceController::class, 'destroy'])
+        ->name('parent.absences.destroy');
 });
 
 Route::get('/driver/dashboard', DriverDashboardController::class)
@@ -188,6 +197,9 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     Route::get('/admin/users', [AdminUserController::class, 'index'])
         ->name('admin.users.index');
 
+    Route::get('/admin/users/{user}', [AdminUserController::class, 'show'])
+        ->name('admin.users.show');
+
     Route::post('/admin/users/{user}/suspend', [AdminUserController::class, 'suspend'])
         ->name('admin.users.suspend');
 
@@ -208,4 +220,13 @@ Route::middleware(['auth', 'role:admin'])->group(function () {
     
     Route::get('/admin/reports/driver-performance', [AdminReportController::class, 'driverPerformance'])
         ->name('admin.reports.driver-performance');
+
+    Route::get('/admin/live-tracking', [AdminDashboardController::class, 'liveTracking'])
+        ->name('admin.live-tracking');
+
+    Route::get('/admin/reports/unserviced', [AdminReportController::class, 'unserviced'])
+        ->name('admin.reports.unserviced');
+
+    Route::get('/admin/reports/unserviced/export', [AdminReportController::class, 'unservicedExport'])
+        ->name('admin.reports.unserviced.export');
 });
