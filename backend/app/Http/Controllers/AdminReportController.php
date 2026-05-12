@@ -112,6 +112,57 @@ class AdminReportController extends Controller
         return $response;
     }
 
+    public function unserviced(): \Illuminate\View\View
+    {
+        // Schools with no active drivers assigned
+        $unservicedSchools = \App\Models\School::whereDoesntHave('drivers', function ($q) {
+            $q->whereHas('user', fn($u) => $u->where('status', 'active'));
+        })
+        ->orderBy('name')
+        ->get();
+
+        // Locations (pickup areas) with no active drivers
+        $unservicedLocations = \App\Models\Location::whereDoesntHave('drivers', function ($q) {
+            $q->whereHas('user', fn($u) => $u->where('status', 'active'));
+        })
+        ->orderBy('name')
+        ->get();
+
+        return view('admin.reports.unserviced', compact('unservicedSchools', 'unservicedLocations'));
+    }
+
+    public function unservicedExport(): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $unservicedSchools = \App\Models\School::whereDoesntHave('drivers', function ($q) {
+            $q->whereHas('user', fn($u) => $u->where('status', 'active'));
+        })
+        ->orderBy('name')
+        ->get();
+
+        $unservicedLocations = \App\Models\Location::whereDoesntHave('drivers', function ($q) {
+            $q->whereHas('user', fn($u) => $u->where('status', 'active'));
+        })
+        ->orderBy('name')
+        ->get();
+
+        $response = new \Symfony\Component\HttpFoundation\StreamedResponse(function () use ($unservicedSchools, $unservicedLocations) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Type', 'Name', 'City', 'Address']);
+            foreach ($unservicedSchools as $s) {
+                fputcsv($handle, ['School', $s->name, $s->city ?? '', $s->address ?? '']);
+            }
+            foreach ($unservicedLocations as $l) {
+                fputcsv($handle, ['Pickup Area', $l->name, $l->city ?? '', $l->address ?? '']);
+            }
+            fclose($handle);
+        });
+
+        $response->headers->set('Content-Type', 'text/csv');
+        $response->headers->set('Content-Disposition', 'attachment; filename="unserviced_areas_'.now()->format('Y-m-d').'.csv"');
+
+        return $response;
+    }
+
     public function driverPerformance(Request $request): StreamedResponse
     {
         $date = $request->query('date');

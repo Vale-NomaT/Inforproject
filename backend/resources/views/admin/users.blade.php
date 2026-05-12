@@ -57,8 +57,13 @@
                     <tbody class="divide-y divide-slate-200 dark:divide-zink-500">
                         @foreach ($users as $user)
                             <tr>
-                                <td class="px-3.5 py-2.5 border-b border-slate-200 dark:border-zink-500 text-slate-500 dark:text-zink-200">
-                                    <h6 class="text-15 mb-0 text-slate-700 dark:text-zink-100">{{ $user->name }}</h6>
+                                <td class="px-3.5 py-2.5 border-b border-slate-200 dark:border-zink-500">
+                                    <a href="{{ route('admin.users.show', $user) }}"
+                                       style="color:#2563eb; font-weight:600; text-decoration:underline; text-underline-offset:3px;"
+                                       onmouseover="this.style.color='#1d4ed8'; this.style.textDecorationColor='#1d4ed8';"
+                                       onmouseout="this.style.color='#2563eb'; this.style.textDecorationColor='#93c5fd';">
+                                        {{ $user->name }}
+                                    </a>
                                 </td>
                                 <td class="px-3.5 py-2.5 border-b border-slate-200 dark:border-zink-500 text-slate-500 dark:text-zink-200">
                                     {{ $user->email }}

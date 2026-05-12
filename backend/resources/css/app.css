@@ -26,9 +26,9 @@
     --color-topbar-border: #e2e8f0;
     --color-topbar-border-dark: #334155;
     --color-topbar-item: #64748b;
-    --color-topbar-item-dark: #cbd5e1;
+    --color-topbar-item-dark: #e2e8f0;
     --color-topbar-item-hover: #3b82f6;
-    --color-topbar-item-hover-dark: #60a5fa;
+    --color-topbar-item-hover-dark: #93c5fd;
     --color-topbar-item-bg-hover: #f1f5f9;
     --color-topbar-item-bg-hover-dark: #334155;
 
@@ -37,13 +37,13 @@
     --color-vertical-menu-border: #e2e8f0;
     --color-vertical-menu-border-dark: #334155;
     --color-vertical-menu-item: #64748b;
-    --color-vertical-menu-item-dark: #cbd5e1;
+    --color-vertical-menu-item-dark: #e2e8f0;
     --color-vertical-menu-item-hover: #3b82f6;
-    --color-vertical-menu-item-hover-dark: #60a5fa;
+    --color-vertical-menu-item-hover-dark: #93c5fd;
     --color-vertical-menu-item-active: #3b82f6;
-    --color-vertical-menu-item-active-dark: #60a5fa;
+    --color-vertical-menu-item-active-dark: #93c5fd;
     --color-vertical-menu-item-bg-active: #eff6ff;
-    --color-vertical-menu-item-bg-active-dark: #1e293b;
+    --color-vertical-menu-item-bg-active-dark: #1e3a8a;
 
     --color-body-bg: #f8fafc;
     --color-body-bordered: #f1f5f9;
@@ -64,4 +64,80 @@
     --spacing-vertical-menu: 16.25rem;
     --spacing-vertical-menu-md: 16.25rem;
     --spacing-vertical-menu-sm: 4.375rem;
+}
+
+/* ── Dark mode: force high-contrast text throughout ── */
+.group[data-mode="dark"] {
+
+    /* Base body text */
+    color: #f1f5f9;
+
+    /* Cards & panels */
+    .card,
+    .card-body,
+    [class*="card"] {
+        color: #f1f5f9;
+    }
+
+    /* All generic text elements */
+    p, span, div, li, td, th, label, small {
+        color: inherit;
+    }
+
+    /* Headings */
+    h1, h2, h3, h4, h5, h6 {
+        color: #f8fafc;
+    }
+
+    /* Muted / secondary text — still readable */
+    .text-slate-500,
+    .text-slate-400,
+    .text-slate-600 {
+        color: #cbd5e1 !important;
+    }
+
+    /* zink text overrides — the main culprit */
+    .dark\:text-zink-100 { color: #f8fafc !important; }
+    .dark\:text-zink-200 { color: #f1f5f9 !important; }
+    .dark\:text-zink-300 { color: #e2e8f0 !important; }
+    .dark\:text-zink-400 { color: #cbd5e1 !important; }
+    .dark\:text-zink-500 { color: #94a3b8 !important; }
+
+    /* Table cells */
+    table td, table th {
+        color: #e2e8f0;
+    }
+
+    /* Form inputs */
+    input, select, textarea {
+        color: #f1f5f9;
+        background-color: #334155;
+        border-color: #475569;
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+        color: #94a3b8;
+    }
+
+    /* Sidebar labels */
+    .text-vertical-menu-item {
+        color: #e2e8f0;
+    }
+
+    /* Topbar */
+    .text-topbar-item {
+        color: #e2e8f0;
+    }
+
+    /* Breadcrumb & page subtitle */
+    .text-slate-700 {
+        color: #e2e8f0 !important;
+    }
+    .text-slate-800 {
+        color: #f8fafc !important;
+    }
+    .text-slate-900 {
+        color: #f8fafc !important;
+    }
 }

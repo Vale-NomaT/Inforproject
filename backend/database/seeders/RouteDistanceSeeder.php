@@ -20,30 +20,24 @@ class RouteDistanceSeeder extends Seeder
         $petra = School::where('name', 'Petra Primary School')->first();
 
         if ($cityHall && $whitestone) {
-            RouteDistance::create([
-                'location_id' => $cityHall->id,
-                'school_id' => $whitestone->id,
-                'one_way_distance_km' => 12.0,
-                'last_calculated' => now(),
-            ]);
+            RouteDistance::firstOrCreate(
+                ['location_id' => $cityHall->id, 'school_id' => $whitestone->id],
+                ['one_way_distance_km' => 12.0, 'last_calculated' => now()]
+            );
         }
 
         if ($bradfield && $hillsideSchool) {
-            RouteDistance::create([
-                'location_id' => $bradfield->id,
-                'school_id' => $hillsideSchool->id,
-                'one_way_distance_km' => 8.5,
-                'last_calculated' => now(),
-            ]);
+            RouteDistance::firstOrCreate(
+                ['location_id' => $bradfield->id, 'school_id' => $hillsideSchool->id],
+                ['one_way_distance_km' => 8.5, 'last_calculated' => now()]
+            );
         }
 
         if ($hillsideDams && $petra) {
-            RouteDistance::create([
-                'location_id' => $hillsideDams->id,
-                'school_id' => $petra->id,
-                'one_way_distance_km' => 15.2,
-                'last_calculated' => now(),
-            ]);
+            RouteDistance::firstOrCreate(
+                ['location_id' => $hillsideDams->id, 'school_id' => $petra->id],
+                ['one_way_distance_km' => 15.2, 'last_calculated' => now()]
+            );
         }
     }
 }

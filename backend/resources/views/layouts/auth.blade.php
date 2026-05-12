@@ -15,21 +15,32 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 
-<body class="flex items-center justify-center min-h-screen py-16 bg-cover bg-auth-pattern dark:bg-auth-pattern-dark font-public bg-slate-50 dark:bg-zink-800">
+<body style="display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; padding:24px; font-family:'Inter',sans-serif; position:relative; overflow:hidden;">
 
-    <div class="mb-0 w-screen lg:w-[500px] card shadow-lg border-none shadow-slate-100 relative">
-        <div class="!px-10 !py-12 card-body">
-            <div class="text-center">
-                <div class="mt-8 text-center">
-                    <h4 class="mb-2 text-custom-500 dark:text-custom-500">@yield('heading', 'Welcome Back !')</h4>
-                    <p class="text-slate-500 dark:text-zink-200">@yield('subheading', 'Sign in to continue to SafeRide Kids.')</p>
-                </div>
-            </div>
+    <!-- Background image -->
+    <div style="position:absolute; inset:0; background-image:url('{{ asset('nomazano.png') }}'); background-size:cover; background-position:center top; background-repeat:no-repeat; z-index:0;"></div>
 
-            <div class="mt-10">
-                @yield('content')
+    <!-- Gradient overlay -->
+    <div style="position:absolute; inset:0; background:linear-gradient(135deg, rgba(240,244,255,0.82) 0%, rgba(219,234,254,0.65) 40%, rgba(191,219,254,0.35) 70%, rgba(147,197,253,0.15) 100%); z-index:1;"></div>
+
+    <!-- Login card -->
+    <div style="position:relative; z-index:10; width:100%; max-width:460px; background:rgba(255,255,255,0.93); backdrop-filter:blur(14px); border-radius:18px; box-shadow:0 24px 60px rgba(0,0,0,0.15); padding:48px 44px;">
+
+        <!-- Logo -->
+        <div style="display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:28px;">
+            <div style="width:36px; height:36px; background:#2563eb; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
             </div>
+            <span style="font-size:18px; font-weight:700; color:#111827;">SafeRide Kids</span>
         </div>
+
+        <div style="text-align:center; margin-bottom:32px;">
+            <h4 class="text-custom-500" style="margin-bottom:6px; font-size:22px; font-weight:700;">@yield('heading', 'Welcome Back!')</h4>
+            <p style="color:#64748b; font-size:14px; margin:0;">@yield('subheading', 'Sign in to continue to SafeRide Kids.')</p>
+        </div>
+
+        @yield('content')
+
     </div>
 
     <script src="{{ asset('assets/libs/choices.js/public/assets/scripts/choices.min.js') }}"></script>
