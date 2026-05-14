@@ -41,7 +41,11 @@ Route::get('/clear-cache', function () {
         Artisan::call('config:clear');
         Artisan::call('cache:clear');
         Artisan::call('view:clear');
-        return 'Cache cleared successfully';
+        Artisan::call('optimize:clear');
+        if (function_exists('opcache_reset')) {
+            opcache_reset();
+        }
+        return 'Cache cleared successfully. Routes: ' . implode(', ', array_keys(Route::getRoutes()->getRoutesByMethod()['POST'] ?? []));
     } catch (\Exception $e) {
         return 'Cache clear failed: ' . $e->getMessage();
     }
